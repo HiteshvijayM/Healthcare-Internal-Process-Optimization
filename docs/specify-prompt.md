@@ -1,105 +1,108 @@
-# `/specify` Prompt — Healthcare Agents
+# `/specify` Prompt — Admin Workflow Agent
 
-**How to use:** paste everything inside the fenced block below into your `specify` agent as a single message.
+**Track:** Healthcare — Internal Process Optimization
+**How to use:** paste everything inside the fenced block in §1 into your `specify` agent as a single message.
 
-**Rule being followed:** `/specify` describes **WHAT** and **WHY**, never **HOW**. All technology choices are deliberately withheld and belong in `/plan` (see §2 at the bottom).
+**Rule being followed:** `/specify` describes **WHAT** and **WHY**, never **HOW**. Technology choices are deliberately withheld and belong in `/plan` — see §2.
 
 ---
 
 ## 1. The prompt
 
 ```text
-Build a Healthcare Assistant Platform containing two assistants that share one safety layer, one audit trail, and one chat surface.
+Build an Administrative Workflow Assistant for a healthcare provider organisation.
 
 WHY THIS EXISTS
-Hospital and clinic staff lose hours every day to two things. First, the information they need is scattered across a policy portal, a shared drive of PDFs, and an intranet wiki, so a simple question turns into a fifteen-minute hunt. Second, routine administrative requests arrive as unstructured documents and then crawl through a chain of manual re-typing, missing-information ping-pong, and handoffs between desks. We want to cut time-to-answer and cut administrative cycle time, without ever letting software make a care decision.
+Administrative work in a clinic or hospital is slow for three specific reasons, and they compound. First, it is repetitive: a request arrives as an unstructured document and a coordinator re-types the same handful of details into a system, every single time, all day. Second, it is full of handoffs: the item passes through an intake desk, a completeness check, a chase-the-sender loop, a routing decision, a drafting step, and a supervisor approval, and each of those is a different person and a different queue. Third, it is full of delay: most of the elapsed time on any item is spent waiting between steps, not being worked on.
+
+The errors follow from the same causes. Items advance with details missing. They get sent to the wrong team. They get re-keyed with mistakes. The same request gets worked twice because nobody noticed it had already arrived.
+
+We want to reduce the elapsed time it takes to process an administrative request, and reduce the number of mistakes made while processing it. We want to do that by having software do the reading, the typing, the checking and the routing, while a human keeps every decision.
 
 WHO USES IT
-- Clinical staff (nurses, pharmacists, physicians) who need a fast, trustworthy answer to a policy or guideline question while working.
-- Administrative coordinators who receive incoming requests and are responsible for checking, routing, and progressing them.
-- A supervisor or reviewer who approves anything before it leaves the organisation.
-- A compliance reviewer who must be able to reconstruct exactly what happened and why.
+- An administrative coordinator who receives incoming requests and is responsible for checking, progressing, and routing them.
+- A supervisor or reviewer who approves anything before it leaves the organisation, and who can edit or reject it first.
+- A team lead who needs to see what is in flight, who owns it, and how long it has been sitting.
+- A compliance reviewer who must be able to reconstruct exactly what happened to any single item and why.
+
+THE WORKFLOW BEING AUTOMATED
+Incoming referral and service-request intake. A request arrives as an unstructured document. Today a person reads it, re-types its details, notices whether anything is missing, chases the sender if it is, decides which team should own it, writes a handoff summary for that team, and gets it approved. The system should collapse that into: the request arrives, the assistant prepares everything, one human reviews and approves.
 
 ---
 
-ASSISTANT A — CLINICAL KNOWLEDGE ASSISTANT
+WHAT THE ASSISTANT MUST DO
 
-Purpose: let staff ask a question in plain English and get one written, sourced answer instead of a list of links.
+Intake and understanding
+- Accept an incoming request that arrives as an unstructured document and register it as a tracked work item with an identifier and a time of arrival.
+- Read that document and produce a structured record of its key details: who sent it, which patient it concerns, what service is being requested, how urgent it is, which payer or plan applies, any supporting notes, and the date.
 
-It must:
-- Accept a natural-language question with no special syntax or keywords.
-- Search every configured knowledge source in one go and return a single consolidated written answer.
-- Show, with every answer, which source documents it used and which section or page each fact came from.
-- State clearly that it could not find an answer when the information is not present in the available sources, rather than producing a plausible-sounding guess.
-- Support follow-up questions that depend on earlier turns in the same conversation.
-- Let the user mark each answer as helpful or not helpful, and retain that judgement.
+Checking
+- Check that record for completeness and plausibility, and clearly name anything that is missing or does not make sense, before the item is allowed to advance.
+- Hold an incomplete item rather than passing it on.
+- Recognise when an incoming request appears to duplicate one already in progress, and flag it instead of allowing the same work to be done twice.
 
-Acceptance scenarios:
-1. A user asks a question whose answer exists in exactly one of the available documents. The assistant returns the correct answer and names that document and its section.
-2. A user asks a question whose answer requires combining facts from two different documents. The assistant returns one answer and cites both.
-3. A user asks a question about a topic that is not covered anywhere in the sources. The assistant says it could not find the information and does not invent an answer.
-4. A user asks a question, then asks a follow-up that refers back to the first question without repeating the subject. The assistant answers correctly using the earlier context.
-5. A user marks an answer as unhelpful. The question, the answer, the sources used, and the rating are retained for later review.
+Progressing
+- When details are missing, prepare the message that asks the sender for exactly those details.
+- Determine which team should own the item, using rules that a non-technical reviewer can read and understand, and be able to state the reason for the decision in one line.
+- Prepare the handoff summary that the receiving team needs, in the form the coordinator would otherwise have typed.
 
----
+Human control
+- Present everything it has prepared to a human, who can approve it, edit it first, or reject it.
+- Never send, submit, or finalise anything without an explicit human approval.
+- When something is rejected, return the item to an earlier stage rather than discarding it.
+- Retain the human's edited version, not the original draft, when an edit has been made.
 
-ASSISTANT B — ADMIN WORKFLOW ASSISTANT
-
-Purpose: take a single high-friction administrative workflow — incoming referral and service-request intake — and remove the repetitive typing, the missing-information delays, and the manual routing.
-
-The workflow, end to end: a request arrives as an unstructured document; someone reads it and re-types the details into a system; someone checks whether anything is missing and chases it; someone decides which team owns it; someone writes the next message or handoff note; someone approves it; and the item waits between each of those steps.
-
-It must:
-- Read an incoming request that arrives as an unstructured document and produce a structured record of the key details.
-- Check that record for completeness and validity, and clearly list anything missing or implausible before the item advances.
-- Determine which team or queue should own the item, based on transparent, inspectable rules, and be able to explain the decision.
-- Draft the next piece of written work a human would otherwise produce, such as a request for the missing information or a handoff summary.
-- Present that draft to a human, who can edit it, approve it, or reject it. Nothing is sent, submitted, or finalised without an explicit human approval.
-- Track each item's current stage, owner, and elapsed time, and make that visible.
-
-Acceptance scenarios:
-1. A complete incoming request is submitted. The assistant extracts the key details accurately into a structured record.
-2. An incomplete incoming request is submitted. The assistant identifies precisely which required details are missing and does not advance the item.
-3. A request that clearly belongs to a particular team is submitted. The assistant routes it to that team and can state why.
-4. The assistant produces a draft handoff note. A reviewer edits the wording and approves it, and the edited version is what is retained.
-5. A reviewer rejects a draft. Nothing is sent, and the item returns to an earlier stage.
-6. A reviewer opens the status view and can see, for every item, which stage it is in, who owns it, and how long it has been in progress.
+Visibility
+- Show, for every item in progress, which stage it is in, who owns it, and how long it has been in progress.
+- Make the total elapsed time for a completed item visible, so it can be compared against doing the same work by hand.
 
 ---
 
-SHARED BEHAVIOUR ACROSS BOTH ASSISTANTS
+ACCEPTANCE SCENARIOS
 
-- Safety boundary: neither assistant answers clinical, diagnostic, treatment, or medical-necessity questions, and neither decides whether care should be approved, denied, or delayed. When asked to do any of these, it declines plainly and directs the user to a qualified human.
-- Audit trail: every interaction records what was asked, which sources or documents were used, what the assistant produced, who approved or rejected it, and when. A compliance reviewer can reconstruct any single interaction end to end.
-- Identifier handling: personal identifiers are masked in logs and audit records.
-- Single entry point: a user reaches both assistants from one conversational interface and can move between them.
-- Measurable behaviour: the system's accuracy and speed can be re-measured on demand against a fixed set of test questions and test documents, producing a repeatable scorecard.
+1. A complete incoming request is submitted. The assistant registers it and extracts its key details accurately into a structured record.
+2. An incoming request with a required detail missing is submitted. The assistant names precisely what is missing, holds the item, and does not advance it.
+3. Following on from the above, the assistant prepares a message back to the sender asking for exactly the missing details and nothing else.
+4. A request that clearly belongs to a particular team is submitted. The assistant assigns it to that team and states in one line why.
+5. The assistant prepares a handoff summary. A reviewer changes some of the wording and approves it. The changed version is what is retained and used.
+6. A reviewer rejects a prepared handoff summary. Nothing is sent, and the item returns to an earlier stage.
+7. A request that has already been submitted is submitted again. The assistant flags it as a probable duplicate rather than processing it a second time.
+8. A team lead opens the status view and can see every item in progress, its stage, its owner, and how long it has been in progress.
+9. A user asks the assistant a clinical or medical-necessity question. It declines plainly and directs them to a qualified human.
+10. A compliance reviewer picks any completed item and can reconstruct what arrived, what was extracted, what rules were applied, what was drafted, who approved it, and when.
 
 ---
 
 NON-NEGOTIABLE CONSTRAINTS
 
 - Only synthetic or de-identified sample data is ever used. No real patient information at any point.
-- The assistants assist; a human decides. Every outbound or final action requires explicit human approval.
-- Answers without a source are not acceptable. If it cannot cite, it must say it does not know.
-- The routing logic must be inspectable and explainable to a non-technical reviewer.
+- The assistant assists; a human decides. Every outbound or final action requires an explicit, recorded human approval.
+- The assistant does not answer clinical, diagnostic, treatment, or medical-necessity questions, and never determines whether care should be approved, denied, or delayed.
+- Personal identifiers are masked in logs and audit records.
+- The routing logic must be inspectable and explainable to a non-technical reviewer. A decision the reviewer cannot understand is not acceptable.
+- The assistant's accuracy and speed must be re-measurable on demand against a fixed set of sample documents, producing a repeatable result.
 
 EXPLICITLY OUT OF SCOPE
 
 - Connecting to any live electronic health record or production clinical system.
 - Submitting anything to a real insurer, payer, or external body.
-- Any clinical, diagnostic, or medical-necessity determination.
+- Making prior authorisation or coverage determinations of any kind.
+- Any clinical or diagnostic judgement.
 - Multi-organisation tenancy, single sign-on, and production hosting concerns.
-- Any claim of financial savings or staff reduction.
+- Any claim of financial savings or headcount reduction.
 
 SUCCESS CRITERIA
 
-- A staff member gets a correct, sourced answer to a policy question in a single interaction, in under ten seconds, on at least four out of five typical questions.
-- Every answer produced carries at least one source reference.
-- The assistant correctly declines every question that falls outside its safety boundary.
-- Key details are extracted correctly from a clear majority of sample intake documents.
-- Sample items are routed to the expected team in nine out of ten cases.
-- The end-to-end time for an intake item is demonstrably shorter than doing the same work by hand.
+Lower cycle time
+- Processing an item through the assistant takes measurably less elapsed time than doing the identical work by hand on the same document.
+- The number of separate people who must touch an item falls from roughly six to one.
+- A prepared draft is ready for human review within a short time of the request arriving.
+
+Fewer errors
+- Key details are extracted correctly from the large majority of sample documents.
+- Every deliberately introduced omission in a test document is detected.
+- Items are assigned to the expected team in nine out of ten sample cases.
+- The large majority of items reach the routing stage with complete details, without needing a rework loop.
 - No item is ever sent or finalised without a recorded human approval.
 
 Flag any requirement above that is ambiguous or that needs a decision before implementation, rather than assuming an answer.
@@ -109,35 +112,61 @@ Flag any requirement above that is ambiguous or that needs a decision before imp
 
 ## 2. Hold these back for `/plan`, not `/specify`
 
-Do **not** put these in the prompt above. They are HOW, and naming them early will contaminate the spec:
+Do **not** put these in the prompt above. They are HOW, and naming them during `/specify` turns the spec into a design document:
 
-- Microsoft Agent Framework (MAF), agents vs. workflows, checkpointing
+- Microsoft Agent Framework (MAF), agents vs. workflows, executors, checkpointing
 - Copilot SDK, chat surface implementation
-- Vector index, embeddings, Azure AI Search
-- Document/OCR parsing libraries
+- PDF / OCR / document parsing libraries
 - FHIR, HL7, X12 data shapes
+- Rules engine or config format choices
 - OpenTelemetry / tracing implementation
-- Language and runtime choices
+- Language, runtime, and storage choices
 
 ---
 
-## 3. Expected clarification questions
+## 3. Pre-agreed answers to likely clarification questions
 
-The specify agent will probably push back on these. Pre-agreed answers:
+The specify agent will probably ask these. Answer from here rather than improvising:
 
 | Likely question | Our answer |
 |---|---|
-| Which knowledge sources exactly? | Three synthetic sets: policy documents, clinical guideline summaries, an internal wiki export. |
-| Which admin workflow? | Referral / service-request intake. One workflow only. |
+| Which administrative workflow? | Incoming referral / service-request intake. One request type only. |
 | What are the "key details" to extract? | Requester, patient reference (synthetic), requested service, urgency, payer/plan, supporting notes, date. |
-| Who are the routing targets? | A small fixed set of teams — decide and document, don't make it dynamic. |
-| How many conversation turns of memory? | Enough for a natural three-turn follow-up. |
-| What counts as "correct"? | Human-graded against a fixed answer key in the test set. |
+| What document formats arrive? | Text-layer PDF and email text first. Scanned/OCR documents are a later addition, not a day-one requirement. |
+| Which teams can an item be routed to? | A small fixed set — decide and document it. Not dynamic, not customer-configurable during the hackathon. |
+| What makes a routing decision "correct"? | Graded against a fixed answer key in the sample set. |
+| How is a duplicate defined? | Same sender and same patient reference and same requested service within a short window. Keep it simple and explainable. |
+| What does "measurably faster" mean? | A stopwatched manual walkthrough of the same document, compared against the assistant path. |
+| Who approves? | A single reviewer role. No multi-level approval chains during the hackathon. |
+| What happens after approval? | The item is marked complete and the handoff summary is retained. Nothing is transmitted externally. |
 
 ---
 
 ## 4. After `/specify`
 
-1. Review the generated spec against [`../feature.md`](../feature.md) — every feature ID (A1–A6, B1–B6, S1–S4) should map to at least one requirement.
+1. Check the generated spec against [`../feature.md`](../feature.md) — every feature ID **F1–F13** should map to at least one requirement.
 2. Resolve every `[NEEDS CLARIFICATION]` using §3 above.
-3. Then run `/plan` and introduce the technology stack.
+3. Confirm the spec still contains no technology choices. If it does, strip them.
+4. Then run `/plan` and introduce MAF + Copilot SDK.
+
+---
+
+## 5. Feature coverage checklist
+
+Use this to verify the generated spec is complete:
+
+| Feature | Covered by prompt section |
+|---|---|
+| F1 Intake a request | "Intake and understanding" · Scenario 1 |
+| F2 Extract the fields | "Intake and understanding" · Scenario 1 |
+| F3 Completeness check | "Checking" · Scenario 2 |
+| F4 Draft the chase message | "Progressing" · Scenario 3 |
+| F5 Route to the right team | "Progressing" · Scenario 4 |
+| F6 Draft the handoff note | "Progressing" · Scenario 5 |
+| F7 Human approval gate | "Human control" · Scenarios 5, 6 |
+| F8 Status board + cycle time | "Visibility" · Scenario 8 |
+| F9 Duplicate detection | "Checking" · Scenario 7 |
+| F10 Safety boundary | Constraints · Scenario 9 |
+| F11 Audit log | Constraints · Scenario 10 |
+| F12 Eval harness | Constraints — "re-measurable on demand" |
+| F13 Chat surface | Personas — coordinator interaction |
