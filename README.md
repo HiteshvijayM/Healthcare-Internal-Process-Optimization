@@ -10,7 +10,7 @@
 
 An agent that takes an incoming administrative request, reads it, checks it, routes it, and drafts the next step — so a human only reviews and approves instead of re-typing and chasing.
 
-**Chosen workflow:** incoming referral / service-request intake. One request type, end to end, done properly.
+**Chosen workflow:** full patient administrative journey orchestration from arrival to release routing, with strict clinical human lockpoints.
 
 ```
 Document arrives → agent extracts fields, flags gaps, picks the queue, drafts the note
