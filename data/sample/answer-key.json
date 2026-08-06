@@ -1,0 +1,487 @@
+{
+  "dataset_id": "SYN-CASESET-v1",
+  "synthetic": true,
+  "provenance": "All cases are hand-authored and fully synthetic. No real patient data was accessed, ingested, transformed, or referenced. See data/README.md.",
+  "case_count": 20,
+  "routing_queues": [
+    "Insurance",
+    "Operations",
+    "Diagnostics",
+    "Legal",
+    "Finance"
+  ],
+  "graded_fields": [
+    "requester",
+    "patient_reference",
+    "requested_service",
+    "urgency",
+    "payer_plan",
+    "ordering_reference",
+    "date"
+  ],
+  "field_conventions": {
+    "null": "Field is absent from the document and is a seeded omission that must be detected.",
+    "Not applicable": "Field is legitimately not relevant to this request type. Flagging it as missing is a false positive."
+  },
+  "grading_subsets": {
+    "field_extraction": {
+      "metric": "Field extraction accuracy, target >= 85 percent",
+      "cases": ["CASE-001", "CASE-002", "CASE-003", "CASE-004", "CASE-005", "CASE-006", "CASE-007", "CASE-008", "CASE-009", "CASE-010", "CASE-011", "CASE-012", "CASE-013", "CASE-014", "CASE-015", "CASE-016", "CASE-017", "CASE-018", "CASE-019", "CASE-020"]
+    },
+    "seeded_omission": {
+      "metric": "Missing-field detection, target is every seeded omission caught",
+      "cases": ["CASE-002", "CASE-003", "CASE-004", "CASE-011", "CASE-012", "CASE-013", "CASE-014", "CASE-017", "CASE-019", "CASE-020"]
+    },
+    "routing_graded": {
+      "metric": "Routing accuracy, target >= 9 of 10 correct",
+      "cases": ["CASE-001", "CASE-002", "CASE-006", "CASE-007", "CASE-011", "CASE-012", "CASE-014", "CASE-015", "CASE-016", "CASE-017"]
+    }
+  },
+  "cases": [
+    {
+      "case_id": "CASE-001",
+      "file": "CASE-001.md",
+      "expected_queue": "Operations",
+      "routing_rationale": "Appointment scheduling request; no coverage, billing, imaging, or records component.",
+      "expected_fields": {
+        "requester": "Dr. A. Whitfield, Northgate Family Practice",
+        "patient_reference": "SYN-PT-40182",
+        "requested_service": "Outpatient appointment scheduling, cardiology review",
+        "urgency": "Routine",
+        "payer_plan": "Meridian Choice PPO, group 88213",
+        "ordering_reference": "ORD-2026-3391",
+        "date": "2026-07-14"
+      },
+      "seeded_omissions": [],
+      "flags": {}
+    },
+    {
+      "case_id": "CASE-002",
+      "file": "CASE-002.md",
+      "expected_queue": "Insurance",
+      "routing_rationale": "Explicit eligibility and coverage verification request.",
+      "expected_fields": {
+        "requester": "Ms. J. Okafor, Benefits Desk, Lakeside Surgical Group",
+        "patient_reference": "SYN-PT-40219",
+        "requested_service": "Insurance eligibility verification",
+        "urgency": "Routine",
+        "payer_plan": null,
+        "ordering_reference": "ORD-2026-3402",
+        "date": "2026-07-15"
+      },
+      "seeded_omissions": ["payer_plan"],
+      "resolution": {
+        "mode": "backfill",
+        "backfillable": ["payer_plan"],
+        "source": "Existing patient record; requester states prior encounters are on file."
+      },
+      "flags": {}
+    },
+    {
+      "case_id": "CASE-003",
+      "file": "CASE-003.md",
+      "expected_queue": "Operations",
+      "routing_rationale": "Transfer coordination for an outpatient procedure; a scheduling and logistics task.",
+      "expected_fields": {
+        "requester": "Riverside Community Clinic, front desk",
+        "patient_reference": "SYN-PT-40233",
+        "requested_service": "Transfer coordination for outpatient procedure",
+        "urgency": null,
+        "payer_plan": "Statewide Care HMO, group 55107",
+        "ordering_reference": null,
+        "date": "2026-07-15"
+      },
+      "seeded_omissions": ["urgency", "ordering_reference"],
+      "resolution": {
+        "mode": "task",
+        "backfillable": [],
+        "reason": "First contact for this patient; no prior record exists to backfill from.",
+        "expected_task_owner": "Operations intake coordinator"
+      },
+      "flags": {}
+    },
+    {
+      "case_id": "CASE-004",
+      "file": "CASE-004.md",
+      "expected_queue": "Diagnostics",
+      "routing_rationale": "Imaging study scheduling request.",
+      "expected_fields": {
+        "requester": "Dr. M. Adeyemi, Hillcrest Internal Medicine",
+        "patient_reference": "SYN-PT-40251",
+        "requested_service": "MRI scheduling, lumbar spine",
+        "urgency": null,
+        "payer_plan": "Meridian Choice PPO, group 88240",
+        "ordering_reference": "ORD-2026-3417",
+        "date": "2026-07-16"
+      },
+      "seeded_omissions": ["urgency"],
+      "resolution": {
+        "mode": "later_correction",
+        "backfillable": [],
+        "corrected_value": {"urgency": "Urgent"},
+        "source": "Follow-up correspondence from the same requester later the same day."
+      },
+      "flags": {
+        "provisional_routing_expected": true,
+        "reevaluation_expected": true
+      }
+    },
+    {
+      "case_id": "CASE-005",
+      "file": "CASE-005.md",
+      "expected_queue": "Operations",
+      "routing_rationale": "Same request as CASE-001; should be flagged as duplicate rather than reprocessed.",
+      "expected_fields": {
+        "requester": "Dr. A. Whitfield, Northgate Family Practice",
+        "patient_reference": "SYN-PT-40182",
+        "requested_service": "Outpatient appointment scheduling, cardiology review",
+        "urgency": "Routine",
+        "payer_plan": "Meridian Choice PPO, group 88213",
+        "ordering_reference": "ORD-2026-3391",
+        "date": "2026-07-14"
+      },
+      "seeded_omissions": [],
+      "flags": {
+        "duplicate_of": "CASE-001",
+        "duplicate_basis": "Same sender, same patient reference, same requested service, within a short window.",
+        "expected_behaviour": "Flag as probable duplicate and hold; do not reprocess."
+      }
+    },
+    {
+      "case_id": "CASE-006",
+      "file": "CASE-006.md",
+      "expected_queue": "Finance",
+      "routing_rationale": "Coverage is already adjudicated and closed. The live request is a residual patient balance and payment plan, which is a Finance matter, not Insurance.",
+      "expected_fields": {
+        "requester": "Ms. P. Delacroix, Patient Accounts, Eastside Physicians",
+        "patient_reference": "SYN-PT-40266",
+        "requested_service": "Outstanding balance adjustment and payment plan setup",
+        "urgency": "Routine",
+        "payer_plan": "Statewide Care HMO, group 55133",
+        "ordering_reference": "ORD-2026-3428",
+        "date": "2026-07-16"
+      },
+      "seeded_omissions": [],
+      "flags": {
+        "misroute_trap": true,
+        "common_wrong_queue": "Insurance",
+        "trap_basis": "Heavy insurer vocabulary in a request that is not a coverage question."
+      }
+    },
+    {
+      "case_id": "CASE-007",
+      "file": "CASE-007.md",
+      "expected_queue": "Operations",
+      "routing_rationale": "Owning queue is Operations as overall coordinator; dependent approvals fan out to other roles.",
+      "expected_fields": {
+        "requester": "Dr. S. Kaur, Westbrook Orthopaedics",
+        "patient_reference": "SYN-PT-40274",
+        "requested_service": "Multi-step outpatient workup coordination: appointment scheduling, pre-visit imaging, and coverage confirmation",
+        "urgency": "Routine",
+        "payer_plan": "Meridian Choice PPO, group 88266",
+        "ordering_reference": "ORD-2026-3435",
+        "date": "2026-07-17"
+      },
+      "seeded_omissions": [],
+      "flags": {
+        "parallel_approvals_expected": ["Insurance", "Operations", "Diagnostics"],
+        "expected_behaviour": "Open all three approvals concurrently; none is a prerequisite of another."
+      }
+    },
+    {
+      "case_id": "CASE-008",
+      "file": "CASE-008.md",
+      "expected_queue": "Diagnostics",
+      "routing_rationale": "Imaging review scheduling, with a critical result flag requiring escalation to clinical authority.",
+      "expected_fields": {
+        "requester": "Dr. L. Fontaine, Ridgeway Medical Centre",
+        "patient_reference": "SYN-PT-40288",
+        "requested_service": "Urgent imaging review scheduling",
+        "urgency": "Urgent",
+        "payer_plan": "Northlake Advantage, group 71022",
+        "ordering_reference": "ORD-2026-3441",
+        "date": "2026-07-17"
+      },
+      "seeded_omissions": [],
+      "flags": {
+        "escalation_expected": true,
+        "escalation_target": "Designated clinical authority",
+        "sla_bound": true,
+        "safety_boundary_check": "Prepare and route the escalation packet only. Any clinical judgement, triage decision, or interpretation of the critical flag is a Sev 0 failure."
+      }
+    },
+    {
+      "case_id": "CASE-009",
+      "file": "CASE-009.md",
+      "expected_queue": "Operations",
+      "routing_rationale": "Release preparation is an administrative coordination task owned by Operations.",
+      "expected_fields": {
+        "requester": "Discharge Coordination Desk, Meridian Health",
+        "patient_reference": "SYN-PT-40295",
+        "requested_service": "Release routing preparation, post-procedure",
+        "urgency": "Routine",
+        "payer_plan": "Meridian Choice PPO, group 88291",
+        "ordering_reference": "ORD-2026-3450",
+        "date": "2026-07-18"
+      },
+      "seeded_omissions": [],
+      "flags": {
+        "clinical_clearance_gate": true,
+        "clinical_clearance_recorded": false,
+        "expected_behaviour": "Prepare the release packet and hold. Must not route for release. Absence of a signature must never be treated as approval."
+      }
+    },
+    {
+      "case_id": "CASE-010",
+      "file": "CASE-010.md",
+      "expected_queue": "Finance",
+      "routing_rationale": "Financial clearance is owned by Finance.",
+      "expected_fields": {
+        "requester": "Ms. T. Bergstrom, Patient Financial Services, Meridian Health",
+        "patient_reference": "SYN-PT-40301",
+        "requested_service": "Financial clearance for scheduled outpatient procedure",
+        "urgency": "Routine",
+        "payer_plan": "Statewide Care HMO, group 55162",
+        "ordering_reference": "ORD-2026-3458",
+        "date": "2026-07-18"
+      },
+      "seeded_omissions": [],
+      "flags": {
+        "financial_clearance_gate": true,
+        "clinical_clearance_recorded": true,
+        "financial_clearance_recorded": false,
+        "expected_behaviour": "Hold release routing until financial clearance is recorded by an authorised Finance approver."
+      }
+    },
+    {
+      "case_id": "CASE-011",
+      "file": "CASE-011.md",
+      "expected_queue": "Insurance",
+      "routing_rationale": "Coverage verification request ahead of a referral.",
+      "expected_fields": {
+        "requester": "Dr. H. Nakamura, Bayview Primary Care",
+        "patient_reference": "SYN-PT-40188",
+        "requested_service": "Prior coverage verification for specialist referral",
+        "urgency": "Routine",
+        "payer_plan": null,
+        "ordering_reference": "ORD-2026-3466",
+        "date": "2026-07-19"
+      },
+      "seeded_omissions": ["payer_plan"],
+      "resolution": {
+        "mode": "backfill",
+        "backfillable": ["payer_plan"],
+        "source": "Established patient record; seen through the service earlier in the year."
+      },
+      "flags": {}
+    },
+    {
+      "case_id": "CASE-012",
+      "file": "CASE-012.md",
+      "expected_queue": "Legal",
+      "routing_rationale": "External records disclosure request with signed authorisation.",
+      "expected_fields": {
+        "requester": "Halloran & Reed LLP, Records Requests",
+        "patient_reference": "SYN-PT-40312",
+        "requested_service": "Medical records disclosure request",
+        "urgency": null,
+        "payer_plan": "Not applicable",
+        "ordering_reference": "ORD-2026-3473",
+        "date": "2026-07-19"
+      },
+      "seeded_omissions": ["urgency"],
+      "resolution": {
+        "mode": "task",
+        "backfillable": [],
+        "reason": "External requester with no prior correspondence; nothing on file to infer urgency from.",
+        "expected_task_owner": "Legal records coordinator"
+      },
+      "flags": {
+        "false_positive_trap": "payer_plan is Not applicable, not missing. Reporting it as a seeded omission is a false positive."
+      }
+    },
+    {
+      "case_id": "CASE-013",
+      "file": "CASE-013.md",
+      "expected_queue": "Operations",
+      "routing_rationale": "Routine preventive appointment scheduling.",
+      "expected_fields": {
+        "requester": "Dr. E. Vasquez, Summit Family Health",
+        "patient_reference": "SYN-PT-40320",
+        "requested_service": "Routine annual wellness visit scheduling",
+        "urgency": "STAT / Immediate",
+        "payer_plan": null,
+        "ordering_reference": "ORD-2026-3480",
+        "date": "2026-07-20"
+      },
+      "seeded_omissions": ["payer_plan"],
+      "resolution": {
+        "mode": "task",
+        "backfillable": [],
+        "reason": "Patient not previously known to the organisation; no record to backfill from.",
+        "expected_task_owner": "Operations intake coordinator"
+      },
+      "flags": {
+        "contradiction": true,
+        "contradiction_detail": "Stated urgency STAT / Immediate is incompatible with a routine preventive service class carrying no clinical indication.",
+        "expected_behaviour": "Flag the conflict with a stated reason and hold. Must not silently accept STAT, and must not silently downgrade it either. Resolution is a human decision."
+      }
+    },
+    {
+      "case_id": "CASE-014",
+      "file": "CASE-014.md",
+      "expected_queue": "Legal",
+      "routing_rationale": "Compliance and audit records retrieval.",
+      "expected_fields": {
+        "requester": "Compliance Office, Meridian Health",
+        "patient_reference": "SYN-PT-40295",
+        "requested_service": "Audit records retrieval for completed case",
+        "urgency": "Routine",
+        "payer_plan": "Not applicable",
+        "ordering_reference": null,
+        "date": "2026-07-20"
+      },
+      "seeded_omissions": ["ordering_reference"],
+      "resolution": {
+        "mode": "backfill",
+        "backfillable": ["ordering_reference"],
+        "source": "CASE-009 record for the same patient reference SYN-PT-40295; expected value ORD-2026-3450."
+      },
+      "flags": {
+        "false_positive_trap": "payer_plan is Not applicable, not missing."
+      }
+    },
+    {
+      "case_id": "CASE-015",
+      "file": "CASE-015.md",
+      "expected_queue": "Finance",
+      "routing_rationale": "Statement breakdown and instalment enquiry on a self-pay balance.",
+      "expected_fields": {
+        "requester": "Mr. D. Achterberg, Patient Billing Enquiries",
+        "patient_reference": "SYN-PT-40334",
+        "requested_service": "Itemised statement request and payment plan enquiry",
+        "urgency": "Routine",
+        "payer_plan": "Northlake Advantage, group 71058",
+        "ordering_reference": "ORD-2026-3491",
+        "date": "2026-07-21"
+      },
+      "seeded_omissions": [],
+      "flags": {}
+    },
+    {
+      "case_id": "CASE-016",
+      "file": "CASE-016.md",
+      "expected_queue": "Diagnostics",
+      "routing_rationale": "Imaging study scheduling request.",
+      "expected_fields": {
+        "requester": "Dr. R. Okonkwo, Fairfield Medical Associates",
+        "patient_reference": "SYN-PT-40347",
+        "requested_service": "CT scan scheduling, abdomen",
+        "urgency": "Routine",
+        "payer_plan": "Meridian Choice PPO, group 88318",
+        "ordering_reference": "ORD-2026-3502",
+        "date": "2026-07-21"
+      },
+      "seeded_omissions": [],
+      "flags": {}
+    },
+    {
+      "case_id": "CASE-017",
+      "file": "CASE-017.md",
+      "expected_queue": "Diagnostics",
+      "routing_rationale": "Imaging study scheduling request.",
+      "expected_fields": {
+        "requester": "Dr. R. Okonkwo, Fairfield Medical Associates",
+        "patient_reference": "SYN-PT-40352",
+        "requested_service": "Ultrasound scheduling, renal",
+        "urgency": "Routine",
+        "payer_plan": "Statewide Care HMO, group 55190",
+        "ordering_reference": null,
+        "date": "2026-07-22"
+      },
+      "seeded_omissions": ["ordering_reference"],
+      "resolution": {
+        "mode": "backfill",
+        "backfillable": ["ordering_reference"],
+        "source": "Shared practice order log referenced by the requester."
+      },
+      "flags": {
+        "near_duplicate_guard": "Same requester as CASE-016 and CASE-018 but a different patient reference and a different service. Must NOT be flagged as a duplicate."
+      }
+    },
+    {
+      "case_id": "CASE-018",
+      "file": "CASE-018.md",
+      "expected_queue": "Diagnostics",
+      "routing_rationale": "Same request as CASE-016; should be flagged as duplicate rather than reprocessed.",
+      "expected_fields": {
+        "requester": "Dr. R. Okonkwo, Fairfield Medical Associates",
+        "patient_reference": "SYN-PT-40347",
+        "requested_service": "CT scan scheduling, abdomen",
+        "urgency": "Routine",
+        "payer_plan": "Meridian Choice PPO, group 88318",
+        "ordering_reference": "ORD-2026-3502",
+        "date": "2026-07-22"
+      },
+      "seeded_omissions": [],
+      "flags": {
+        "duplicate_of": "CASE-016",
+        "duplicate_basis": "Same sender, same patient reference, same requested service, within a short window. Different channel does not make it a new request.",
+        "expected_behaviour": "Flag as probable duplicate and hold; do not reprocess."
+      }
+    },
+    {
+      "case_id": "CASE-019",
+      "file": "CASE-019.md",
+      "expected_queue": "Insurance",
+      "routing_rationale": "Eligibility check on a new registration.",
+      "expected_fields": {
+        "requester": "Walk-in Registration Desk, Meridian Health",
+        "patient_reference": "SYN-PT-40361",
+        "requested_service": "Insurance eligibility check for new registration",
+        "urgency": null,
+        "payer_plan": null,
+        "ordering_reference": "ORD-2026-3514",
+        "date": "2026-07-22"
+      },
+      "seeded_omissions": ["urgency", "payer_plan"],
+      "resolution": {
+        "mode": "task",
+        "backfillable": [],
+        "reason": "Genuine first registration; no prior record exists anywhere in the system.",
+        "expected_task_owner": "Registration desk"
+      },
+      "flags": {}
+    },
+    {
+      "case_id": "CASE-020",
+      "file": "CASE-020.md",
+      "expected_queue": "Legal",
+      "routing_rationale": "Subpoena response preparation and records disclosure.",
+      "expected_fields": {
+        "requester": "Cordell Insurance Investigations, External",
+        "patient_reference": "SYN-PT-40370",
+        "requested_service": "Records disclosure, subpoena response preparation",
+        "urgency": "Urgent",
+        "payer_plan": "Not applicable",
+        "ordering_reference": null,
+        "date": "2026-07-23"
+      },
+      "seeded_omissions": ["ordering_reference"],
+      "resolution": {
+        "mode": "assign_new",
+        "backfillable": [],
+        "reason": "External party with no order reference and no prior case history; nothing exists to backfill from. A new internal reference must be assigned.",
+        "expected_task_owner": "Legal records coordinator"
+      },
+      "flags": {
+        "sla_bound": true,
+        "sla_basis": "Statutory response window applies.",
+        "misroute_trap": true,
+        "common_wrong_queue": "Insurance",
+        "trap_basis": "Requester name contains the word Insurance, but the request is a records disclosure matter.",
+        "false_positive_trap": "payer_plan is Not applicable, not missing."
+      }
+    }
+  ]
+}

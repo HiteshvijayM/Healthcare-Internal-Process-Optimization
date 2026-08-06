@@ -4,9 +4,9 @@
 **How to use:** paste everything inside the fenced block in §1 into your `specify` agent as a single message.
 
 **Governance baseline (must be enforced):**
-- [`docs/constitution.md`](docs/constitution.md) is non-negotiable and immutable by default.
-- [`docs/progress-log.md`](docs/progress-log.md) must be updated for every change.
-- [`docs/multipass-validation-harness.md`](docs/multipass-validation-harness.md) is the one-stop readiness gate for scenario coverage and release claims.
+- [`docs/constitution.md`](../docs/constitution.md) is non-negotiable and immutable by default.
+- [`docs/progress-log.md`](../docs/progress-log.md) must be updated for every change.
+- [`docs/multipass-validation-harness.md`](../docs/multipass-validation-harness.md) is the one-stop readiness gate for scenario coverage and release claims.
 
 **Rule being followed:** `/specify` describes **WHAT** and **WHY**, never **HOW**. Technology choices are deliberately withheld and belong in `/plan` — see §2.
 
@@ -97,8 +97,8 @@ NON-NEGOTIABLE CONSTRAINTS
 - Personal identifiers are masked in logs and audit records.
 - The routing logic must be inspectable and explainable to a non-technical reviewer. A decision the reviewer cannot understand is not acceptable.
 - The assistant's accuracy and speed must be re-measurable on demand against a fixed set of sample documents, producing a repeatable result.
-- [`docs/constitution.md`](docs/constitution.md) is authoritative and non-overridable by execution agents or automation.
-- Every implementation change must be logged in [`docs/progress-log.md`](docs/progress-log.md).
+- docs/constitution.md is authoritative and non-overridable by execution agents or automation.
+- Every implementation change must be logged in docs/progress-log.md.
 
 EXPLICITLY OUT OF SCOPE
 
@@ -155,8 +155,8 @@ The specify agent will probably ask these. Answer from here rather than improvis
 |---|---|
 | Which administrative workflow? | Full patient administrative journey orchestration from arrival to release routing, with strict clinical human lockpoints. |
 | What are the "key details" to extract? | Requester, patient reference (synthetic), requested service, urgency, payer/plan, supporting notes, date. |
-| What document formats arrive? | Text-layer PDF and email text first. Scanned/OCR documents are a later addition, not a day-one requirement. |
-| Which teams can an item be routed to? | A small fixed set — decide and document it. Not dynamic, not customer-configurable during the hackathon. |
+| What document formats arrive? | Text-layer documents generally. The current sample set uses Markdown as a stand-in for the inbound email and fax-cover shapes, so the extraction path can be built and graded without a parsing dependency. Real text-layer PDF and raw email follow once the clean path works. Scanned/OCR documents are a later addition, not a day-one requirement. |
+| Which teams can an item be routed to? | A fixed set of five, matching the F11 approver roles: **Insurance, Operations, Diagnostics, Legal, Finance.** Not dynamic, not customer-configurable during the hackathon. See [`../data/README.md`](../data/README.md). |
 | What makes a routing decision "correct"? | Graded against a fixed answer key in the sample set. |
 | How is a duplicate defined? | Same sender and same patient reference and same requested service within a short window. Keep it simple and explainable. |
 | What does "measurably faster" mean? | A stopwatched manual walkthrough of the same document, compared against the assistant path. |
@@ -171,9 +171,9 @@ The specify agent will probably ask these. Answer from here rather than improvis
 1. Check the generated spec against [`../feature.md`](../feature.md) — every feature ID **F1–F24** should map to at least one requirement.
 2. Resolve every `[NEEDS CLARIFICATION]` using §3 above.
 3. Confirm the spec still contains no technology choices. If it does, strip them.
-4. Verify all generated requirements comply with [`docs/constitution.md`](docs/constitution.md) before any planning or implementation.
-5. Update [`docs/progress-log.md`](docs/progress-log.md) with any requirement or scope changes produced by `/specify`.
-6. Validate coverage and acceptance against [`docs/multipass-validation-harness.md`](docs/multipass-validation-harness.md) and record results.
+4. Verify all generated requirements comply with [`docs/constitution.md`](../docs/constitution.md) before any planning or implementation.
+5. Update [`docs/progress-log.md`](../docs/progress-log.md) with any requirement or scope changes produced by `/specify`.
+6. Validate coverage and acceptance against [`docs/multipass-validation-harness.md`](../docs/multipass-validation-harness.md) and record results.
 7. Then run `/plan` and introduce implementation choices.
 
 ---

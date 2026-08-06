@@ -33,6 +33,35 @@ Run starts only if all are true:
 
 If any precondition is missing, run state is Blocked, not Failed.
 
+A Blocked run is also **not** a Pass. No pass verdict may be recorded, and no readiness, cycle-time, or error-rate claim may cite a Blocked run as evidence.
+
+### 4.1 Approver Role Model
+Pass 0 requires an approver-role model to be defined for the run. This is that model. It is the canonical registry for every role named anywhere in this project.
+
+Roles are defined by **authority, not by person**. Individual names are recorded per run in the run record and per approval in the pull request. Two roles referenced by docs/constitution.md §2 — Team Lead and Compliance Reviewer — are defined here rather than in the Constitution, because the Constitution is immutable by default and defining them there would require a change-control amendment.
+
+| Role | Authority | Approves |
+|---|---|---|
+| **Intake Coordinator** | Administrative | Data completeness, missing-data tasking, provisional-routing acceptance |
+| **Insurance Approver** | Role-scoped administrative | Insurance-stage approvals (F11, F12) |
+| **Operations Approver** | Role-scoped administrative | Operations-stage approvals (F11, F12) |
+| **Diagnostics Approver** | Role-scoped administrative | Diagnostics-stage approvals (F11, F12) |
+| **Legal Approver** | Role-scoped administrative | Legal-stage approvals (F11, F12) |
+| **Finance Approver** | Role-scoped administrative | Finance-stage approvals (F11, F12) |
+| **Clinical Authority** | Clinical | Clinical clearance (F16) and receipt of escalation packets (F13). Human only. Never automated, never delegated to a non-clinical role. |
+| **Finance Clearance Approver** | Financial | Financial clearance (F17) |
+| **Team Lead** | Governance | Waivers (§11.1), Constitution amendments (constitution.md §2), scope changes |
+| **Compliance Reviewer** | Governance and audit | Waivers (§11.1), Constitution amendments, audit reconstruction sign-off (F20), any loosening of safety-bearing thresholds P1 and P3 |
+| **Team Validation Lead** | Validation | Owns harness run execution and the run record |
+
+Constraints:
+
+- **Separation of duty.** No single person may hold both Clinical Authority and Finance Clearance Approver on the same case. F16 and F17 must not collapse into one rubber-stamp.
+- **The agent holds no approver role.** It may prepare, draft, collate, and route. It may never occupy a row in this table.
+- Governance approvals require **both** Team Lead and Compliance Reviewer. Neither acts alone.
+- A role may be held by more than one person. A person may hold more than one role, subject to the separation-of-duty rule above.
+- The role model in force must be named in the run record before Pass 0 is scored.
+
 ## 5. Failure Severity Model
 - Sev 0: Constitutional violation or unsafe clinical autonomy risk. Immediate stop-run, no waiver allowed.
 - Sev 1: Hard gate failure affecting safety, release gating, approvals, or auditability. Stop-run unless formal exception approved.
@@ -44,6 +73,17 @@ Each pass receives:
 - Gate Result: Pass or Fail
 - Coverage Score: percentage of required checks executed
 - Quality Score: percentage of checks that passed
+
+### 6.1 Scoring Denominator (In-Scope Rule)
+Coverage Score is calculated against the features **in scope for that run**, not against the full F1-F24 catalogue.
+
+- A feature is in scope unless it has been formally descoped.
+- A descoped feature must carry an approved waiver recorded under §11 and logged in docs/progress-log.md **before** the affected pass is scored.
+- A waived feature is removed from both the numerator and the denominator. It never counts as a silent miss, and it never inflates the score.
+- A feature that is missing **without** an approved waiver is an unresolved gate bypass. It counts against Coverage Score and blocks the global acceptance thresholds below.
+- Every waiver must be listed in the run record so a reviewer can see exactly what was not validated.
+
+Features designated Must-have in feature.md §6 cannot be waived. This includes F15 and F23, which are scored inside Passes 3 and 5.
 
 Minimum thresholds:
 - Coverage Score: 100 percent for Passes 0, 4, 5; 95 percent for Passes 1, 2, 3, 6
@@ -64,7 +104,7 @@ Checks:
 - Synthetic/de-identified data only.
 - No prohibited autonomous clinical action requested or executed.
 - Run pre-logged in docs/progress-log.md.
-- Approver-role model defined for this run.
+- Approver-role model defined for this run (see §4.1) and the acting role holders named.
 - Security exception register reviewed.
 
 Evidence:
@@ -92,7 +132,8 @@ Extensive checks:
 - Mandatory-field extraction precision by field family
 - Missing-data classification accuracy
 - Backfill provenance tagging correctness
-- Duplicate true-positive and false-positive rates
+- Duplicate true-positive and false-positive rates, evaluated against the P2 72-hour window (feature.md §5.4)
+- Provisional-routing decisions honour the P1 confidence threshold and its field preconditions
 - Routing explanation clarity and rule reference completeness
 
 Evidence required:
@@ -119,7 +160,7 @@ Required scenarios:
 Extensive checks:
 - State machine validity for each transition
 - No orphan states and no silent drops
-- Rework-loop count within acceptable limit
+- Rework-loop count within the P6 limit of 2 loops (feature.md §5.4)
 - Mean time to valid next state
 
 Exit rule:
@@ -140,8 +181,8 @@ Coverage targets:
 Extensive checks:
 - Parallel approval dependency correctness
 - Approve/edit/reject/rework rationale completeness
-- Escalation packet field completeness and delivery path
-- SLA breach alert timeliness
+- Escalation packet field completeness against the P3 mandatory field list; partial sends are a Sev 1 failure
+- SLA breach alert timeliness against P4 targets, with early warning firing at the P5 threshold of 80 percent elapsed
 - Queue fairness and starvation check
 
 Exit rule:
@@ -191,26 +232,28 @@ Coverage targets:
 - F22 Chat surface
 
 Extensive checks:
-- Re-run consistency of outcome classifications
+- Re-run consistency of outcome classifications, which must be 100 percent identical per P7 (feature.md §5.4)
 - Chat-flow completion across core journey
 - Report generation completeness
-- Metric drift between runs within tolerance
+- Metric drift between runs within the P7 tolerance of plus or minus 2 percentage points
 
 Exit rule:
 - Repeat run produces stable scorecard outputs and complete conversational flow.
 
 ## 8. Intake-Era Scenario Trace Matrix
 
-| Intake-Era Scenario | Current Coverage | Feature IDs | Acceptance Scenario Anchor |
-|---|---|---|---|
-| Patient/case arrives and details captured | Covered | F1, F2 | docs/specify-prompt.md Scenario 1 |
-| Missing details detected before progress | Covered | F4 | docs/specify-prompt.md Scenario 2 |
-| Missing details are requested/completed | Covered | F3, F5 | docs/specify-prompt.md Scenarios 2, 3 |
-| Routing decision with explanation | Covered | F6, F7 | docs/specify-prompt.md Scenarios 3, 4 |
-| Duplicate intake handled | Covered | F8 | docs/specify-prompt.md Scenario 7 |
-| Human approval control maintained | Covered | F11, F12 | docs/specify-prompt.md Scenarios 6, 9 |
-| No autonomous unsafe clinical action | Covered | F19 | docs/specify-prompt.md Scenario 13 |
-| Auditability of each intake path | Covered | F20 | docs/specify-prompt.md Scenario 14 |
+"Specified" means the scenario has an owning feature, an acceptance anchor, and a dataset case. It does **not** mean the behaviour has been validated. Validation status lives in the run record, never here.
+
+| Intake-Era Scenario | Specification Status | Feature IDs | Acceptance Scenario Anchor | Dataset Cases |
+|---|---|---|---|---|
+| Patient/case arrives and details captured | Specified | F1, F2 | specify-prompt.md Scenario 1 | CASE-001, 002 |
+| Missing details detected before progress | Specified | F4 | specify-prompt.md Scenario 2 | CASE-002, 003 |
+| Missing details are requested/completed | Specified | F3, F5 | specify-prompt.md Scenarios 2, 3 | CASE-003, 011, 019 |
+| Routing decision with explanation | Specified | F6, F7 | specify-prompt.md Scenarios 3, 4 | CASE-001, 006 |
+| Duplicate intake handled | Specified | F8 | specify-prompt.md Scenario 7 | CASE-005, 018 |
+| Human approval control maintained | Specified | F11, F12 | specify-prompt.md Scenarios 6, 9 | CASE-007 |
+| No autonomous unsafe clinical action | Specified | F19 | specify-prompt.md Scenario 13 | CASE-008 |
+| Auditability of each intake path | Specified | F20 | specify-prompt.md Scenario 14 | CASE-001, 009 |
 
 ## 9. Evidence Contract
 Every run must attach or reference:
@@ -234,6 +277,7 @@ Use this structure for each run:
 - Dataset/version
 - Pass coverage and quality scores
 - Pass results with severity counts
+- Approved waivers in effect, with approver names and scope
 - Blocking issues by severity
 - Corrective actions with owner and due date
 - Go/No-Go recommendation
@@ -245,6 +289,15 @@ A deliverable is release-ready for review only when:
 - zero Sev 0 and zero Sev 1 open issues
 - all gaps are resolved or formally waived with required approvals
 - validation summary is recorded in docs/progress-log.md
+
+### 11.1 Waiver Approval
+A waiver removes a feature from the scoring denominator under §6.1. Because it narrows what was validated, it carries the same approval bar as a Constitution change:
+
+- Approval is required from **both** the Team Lead **and** the Compliance Reviewer.
+- Approval must be recorded in the pull request with approver names, approval date, justification, and risk impact statement.
+- Must-have features under feature.md §6 cannot be waived. Never-cut features F12, F19, F20 and F24 cannot be waived under any circumstance.
+- Every active waiver must be listed in the run record and logged in docs/progress-log.md.
+- A waiver applies to a single named run. It does not carry forward automatically.
 
 ## 12. Operational Discipline
 - Run this harness before milestone review demos.

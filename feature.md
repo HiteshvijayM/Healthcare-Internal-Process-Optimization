@@ -4,8 +4,7 @@
 **Track:** Healthcare — Internal Process Optimization
 **Stack:** Microsoft Agent Framework (MAF) + Copilot SDK
 **Status:** Draft v2 — for review
-**Owner:** _(team name)_
-**Date:** 2026-07-31
+**Owner:** Team Lead (role defined in [`docs/multipass-validation-harness.md`](docs/multipass-validation-harness.md) §4.1)
 
 **Governance baseline (non-negotiable):**
 - [`docs/constitution.md`](docs/constitution.md) defines system constraints and cannot be changed without explicit Team Lead + Compliance Reviewer approval.
@@ -105,9 +104,9 @@ Every feature traces to one of the two expected values. If it traces to neither,
 | **F3** | Backfill from records | Searches available records to fill missing required fields before requesting new input. | Backfillable fields are auto-filled with provenance tag. | Both | M |
 | **F4** | Completeness and plausibility checks | Flags missing, contradictory, or implausible data before unsafe progression. | Missing and implausible values are flagged with reasons. | Fewer errors | S |
 | **F5** | Missing-data tasking | Creates targeted completion tasks for required expert/admin owners when mandatory data remains unresolved. | Open tasks exist with clear owner and due state. | Both | S |
-| **F6** | Provisional routing policy | Allows provisional progression only when confidence threshold and policy rules are met. | Provisional cases are clearly marked and re-evaluated on new data. | Cycle time | M |
+| **F6** | Provisional routing policy | Allows provisional progression only when confidence threshold and policy rules are met. | Provisional cases are clearly marked and re-evaluated on new data, per **P1** (§5.4). | Cycle time | M |
 | **F7** | Explainable routing | Routes cases using inspectable rules and returns one-line rationale. | Routing accuracy and reason visibility targets are met. | Both | S |
-| **F8** | Duplicate detection | Flags likely duplicate case submissions and prevents reprocessing. | Duplicate sample cases are flagged consistently. | Fewer errors | S |
+| **F8** | Duplicate detection | Flags likely duplicate case submissions and prevents reprocessing. | Duplicate sample cases are flagged consistently within the **P2** window (§5.4). | Fewer errors | S |
 
 ### 5.2 Workflow Orchestration and Approvals
 
@@ -117,9 +116,9 @@ Every feature traces to one of the two expected values. If it traces to neither,
 | **F10** | Case record updates | Appends tests/medications-related administrative artifacts to case record with timestamp and source context. | New artifacts are persisted and traceable. | Fewer errors | M |
 | **F11** | Parallel approval orchestration | Opens role-based approvals in parallel where policy allows (insurance, operations, diagnostics, legal, finance). | Approval state shows parallel tasks and blockers. | Cycle time | M |
 | **F12** | Human approval actions | Supports approve/edit/reject/return-for-rework actions with rationale capture. | All actions work and state transitions are correct. | Both | M |
-| **F13** | Critical escalation packet | Auto-prepares and routes escalation packet for critical-condition signals to clinical authority. | Escalation packet completeness target is met. | Fewer errors | M |
+| **F13** | Critical escalation packet | Auto-prepares and routes escalation packet for critical-condition signals to clinical authority. | All mandatory packet fields present per **P3** (§5.4); no partial sends. | Fewer errors | M |
 | **F14** | Status board and blockers | Displays stage, owner, elapsed time, approvals, blockers, and provisional flags. | Dashboard shows current state for all in-flight cases. | Cycle time | S |
-| **F15** | SLA timers and alerts | Tracks approval and stage SLAs and flags breaches early. | SLA breaches are visible and actionable. | Cycle time | S |
+| **F15** | SLA timers and alerts | Tracks approval and stage SLAs and flags breaches early. | Timers and alerts fire per **P4** and **P5** (§5.4); breaches are visible and actionable. | Cycle time | S |
 
 ### 5.3 Governance, Safety, and Release Gates
 
@@ -129,13 +128,31 @@ Every feature traces to one of the two expected values. If it traces to neither,
 | **F17** | Financial clearance gate | Prevents release progression until required financial clearance is complete. | No case advances to release path without finance clearance token. | Both | M |
 | **F18** | Release routing gate | Routes for release only when all mandatory gates and data completeness checks pass. | Release route never bypasses blocked prerequisites. | Both | S |
 | **F19** | Stage-aware safety boundary | Enforces non-clinical-only autonomous behavior across all stages. | Out-of-bounds requests are consistently refused and escalated. | Fewer errors | M |
-| **F20** | Audit and replay trail | Stores full case lineage for compliance reconstruction and replay. | Random sampled cases are fully reconstructable. | Fewer errors | M |
+| **F20** | Audit and replay trail | Stores full case lineage for compliance reconstruction and replay. | Random sampled cases are fully reconstructable within the **P8** retention window (§5.4). | Fewer errors | M |
 | **F21** | Eval harness | Fixed test set + run script + scorecard for repeatable quality and latency checks. | `run_eval` produces repeatable scorecard output. | Both | M |
-| **F22** | Chat surface | Supports case submit, status checks, approvals, and escalations via conversation. | Full admin journey can be completed through chat flow. | Cycle time | S |
+| **F22** | Chat surface | Supports case submit, status checks, approvals, and escalations via conversation. | Full admin journey can be completed through the **P9** surface (§5.4). | Cycle time | S |
 | **F23** | Policy version control | Tracks routing/approval policy versions and effective dates. | Each decision is traceable to a policy version. | Fewer errors | S |
 | **F24** | Governance enforcement | Enforces constitution compliance and mandatory progress logging workflow. | No change proceeds without constitution and progress log checks. | Both | S |
 
 **Nice-to-have, only if time permits:** bulk case ingestion, expanded explanation traces, and policy simulation tooling.
+
+### 5.4 Policy Thresholds and SLAs
+
+Every number the validation harness scores against lives here, in one place a non-technical reviewer can read. Changing any value requires a progress-log entry and re-running any harness pass that depended on it.
+
+| ID | Policy | Value |
+|---|---|---|
+| **P1** | Provisional routing confidence (F6) | Permitted only when routing confidence is **≥ 0.80** *and* both `patient_reference` and `requested_service` are present. Never permitted while a critical signal is active or a clearance gate is pending. |
+| **P2** | Duplicate detection window (F8) | **72 hours** from first receipt. Match on sender + patient reference + requested service. Channel does not matter — a fax resend of an email request is still a duplicate. |
+| **P3** | Escalation packet completeness (F13) | **100% of mandatory fields**, no partial sends. Mandatory: case ID, patient reference, requester, critical-signal description, source document reference, timestamp, designated clinical recipient. |
+| **P4** | Approval SLAs (F15) | Routine **2 business days** · Urgent **4 hours** · Critical escalation acknowledgement **30 minutes**. |
+| **P5** | SLA alert timing (F15) | Early-warning alert at **80% of SLA elapsed**. Breach recorded at 100%. |
+| **P6** | Rework-loop limit | Maximum **2** rework loops per case, then mandatory human escalation. A third loop is a Sev 2 defect. |
+| **P7** | Run-to-run drift tolerance (F21) | Aggregate scores within **±2 percentage points** between runs on the same dataset and build. Per-case outcome classifications must be **100% identical** — determinism is not negotiable. |
+| **P8** | Audit retention (F20) | Full case lineage retained for the **entire project lifetime, minimum 90 days**. No purge before review sign-off. *Production would require 6 years under HIPAA — out of scope here, but named so the gap is visible.* |
+| **P9** | Chat surface scope (F22) | A **single web/in-app conversational surface**, one demo tenant, one authenticated reviewer session. Teams, mobile, and email-in surfaces are out of scope. |
+
+P1 and P3 are safety-bearing. Loosening either requires Compliance Reviewer approval, not just Team Lead.
 
 ---
 
@@ -143,11 +160,12 @@ Every feature traces to one of the two expected values. If it traces to neither,
 
 | Tier | Features | Rule |
 |---|---|---|
-| **Must have** | F1, F2, F4, F7, F11, F12, F16, F17, F18, F19, F20, F24 | Without these there is no safe demo and no governance story |
+| **Must have** | F1, F2, F4, F7, F11, F12, F15, F16, F17, F18, F19, F20, F23, F24 | Without these there is no safe demo and no governance story |
 | **Should have** | F3, F5, F6, F8, F9, F10, F13, F14, F21, F22 | Cut only if genuinely out of time |
-| **Nice to have** | F15, F23 | Cut freely |
 
 **Never cut:** F12 (human approval actions), F19 (safety boundary), F20 (audit trail), F24 (governance enforcement). These are what make it a healthcare product rather than a script.
+
+**Cutting rule.** F15 and F23 are Must-have because the multipass harness scores them inside hard-gate and near-hard-gate passes; they cannot be dropped without failing validation. Any Should-have feature that is cut must be recorded as a formal waiver under [`docs/multipass-validation-harness.md`](docs/multipass-validation-harness.md) §11 and logged in [`docs/progress-log.md`](docs/progress-log.md) before the affected pass is scored.
 
 ---
 
@@ -159,9 +177,11 @@ Small, provable, and directly tied to the two expected values.
 
 | Metric | Target | How we measure |
 |---|---|---|
-| End-to-end time per item | Agent path measurably faster than manual | Stopwatch both paths in the demo, same document |
-| Human touches per item | Down from ~6 to 1 | Count the handoffs, before vs after |
+| End-to-end time per item | Agent path measurably faster than manual | Stopwatch both paths under the §13.3 baseline protocol — same document, 3-run manual median, reported as a range |
+| Avoidable serial handoffs per item | Reduced from ~6 sequential desks by parallelising eligible approvals and tasking | Count the steps that must happen *in sequence*, before vs after |
 | Time to first action | < 30 seconds from intake to draft ready | Timestamped in the status board |
+
+> We measure *serial* handoffs, not total human touches. The journey deliberately keeps multiple humans in the loop — five role approvers (F11) plus mandatory clinical (F16) and financial (F17) clearance gates. The win is that those approvals run in parallel instead of queueing behind each other, not that people are removed.
 
 Validation rule: cycle-time claims are valid only if confirmed through a passing run in [`docs/multipass-validation-harness.md`](docs/multipass-validation-harness.md).
 
@@ -177,13 +197,13 @@ Validation rule: cycle-time claims are valid only if confirmed through a passing
 
 Validation rule: error-rate claims are valid only if confirmed through a passing run in [`docs/multipass-validation-harness.md`](docs/multipass-validation-harness.md).
 
-> We are deliberately **not** claiming dollar savings or FTE reduction. We claim cycle time and error rate, because those are the stated expected values and we can actually measure them in three weeks.
+> We are deliberately **not** claiming dollar savings or FTE reduction. We claim cycle time and error rate, because those are the stated expected values and they are the ones we can actually measure within this build's scope.
 
 ---
 
 ## 8. Demo Script
 
-1. **The manual baseline.** Show a sample arriving case document. Walk through what a coordinator does by hand. Put a stopwatch on it.
+1. **The manual baseline.** Show a sample arriving case document. Walk through what a coordinator does by hand. Time it under the §13.3 protocol — the median of three runs is the number we quote, not the run happening on stage.
 2. **The agent path.** Drop the same document in. Fields extracted, item registered, queue chosen with a reason, handoff note drafted. Stop the watch. Compare.
 3. **The broken path.** Drop in a document with a missing field. Agent holds the item, names what's missing, drafts the chase message.
 4. **Human control.** Reviewer edits the draft, approves. Then reject one and show it goes back a stage. Show that nothing ever sent itself.
@@ -198,9 +218,9 @@ Validation rule: error-rate claims are valid only if confirmed through a passing
 - **MAF** — model this as a **workflow**, not a single agent. The stages (arrive/register → enrich/backfill → validate → route/provisional-route → approvals/escalation → clinical gate → finance gate → release route) map onto workflow executors, giving checkpointing, resumability, and safe human lockpoints.
 - **Copilot SDK** — the conversational surface for F22: submit a case, ask for status, approve, and monitor escalations.
 - **Document reading** — start with text-layer PDFs and email text. Add scanned/OCR documents only once the clean path works.
-- **Routing rules (F5)** — keep them declarative and in a config file, not buried in code. A reviewer must be able to read them.
+- **Routing rules (F7)** — keep them declarative and in a config file, not buried in code. A reviewer must be able to read them.
 - **Observability** — turn on MAF's built-in tracing from day one; F20 replay-grade audit then costs us very little.
-- **Data** — all synthetic. Generate representative sample patient-case artifacts. Record provenance in `data/README.md`.
+- **Data** — all synthetic. Sample patient-case artifacts live in [`data/sample/`](data/sample/), with provenance recorded in [`data/README.md`](data/README.md).
 
 ---
 
@@ -215,13 +235,15 @@ Validation rule: error-rate claims are valid only if confirmed through a passing
 
 ## 11. Milestones
 
-| Date | Deliverable |
-|---|---|
-| **7/30** | This spec + repo skeleton + sample documents |
-| Week 1 | F1-F8 working. Intake, backfill, quality checks, and routing baseline stable. |
-| Week 2 | F9-F15 working. Approvals, escalation packet, visibility, and SLA behavior stable. |
-| Week 3 | F16-F24 working. Clearance gates, release gating, safety, audit, governance, and eval run complete. |
-| Review | Scorecard + live demo + "what production would need" slide |
+Milestones are sequential and gated by completion, not by calendar date. A milestone is reached only when its exit gate passes.
+
+| Milestone | Deliverable | Exit gate |
+|---|---|---|
+| **M0 — Foundation** | Spec, governance baseline, repo skeleton, synthetic sample dataset | Pass 0 governance pre-check clean; dataset manifest recorded |
+| **M1 — Intake baseline** | F1-F8 working. Intake, backfill, quality checks, and routing baseline stable. | Harness Passes 1 and 2 |
+| **M2 — Orchestration** | F9-F15 working. Approvals, escalation packet, visibility, and SLA behavior stable. | Harness Pass 3 |
+| **M3 — Governance** | F16-F24 working. Clearance gates, release gating, safety, audit, governance, and eval run complete. | Harness Passes 4, 5 and 6 |
+| **M4 — Review** | Scorecard + live demo + "what production would need" slide | Full multipass run recorded as Go in [`docs/progress-log.md`](docs/progress-log.md) |
 
 ---
 
@@ -235,10 +257,45 @@ Validation rule: error-rate claims are valid only if confirmed through a passing
 
 ---
 
-## 13. Open Questions for the Reviewers
+## 13. Resolved Decisions
 
-1. **Journey scope.** We picked full patient administrative journey orchestration to remove friction across intake, approvals, escalation, and release. Confirm this scope is acceptable for review.
-2. **Sample data.** Is there a synthetic dataset the program wants us to standardise on, or do we generate our own?
-3. **Baseline.** For the cycle-time claim, is a stopwatched manual walkthrough acceptable evidence, or do you want something stronger?
-4. **Guardrail wording.** Is there required compliance or safety language the program wants reused across all teams?
-5. **Packaging.** For the marketplace offer, should the routing rules be customer-configurable at install time, or fixed?
+These were previously open questions for reviewers. They are now decided. Each records the decision, the reasoning, and where it takes effect. Reopening any of them requires a progress-log entry and re-running any harness pass that depended on it.
+
+### 13.1 Journey scope — **Decided: full patient administrative journey orchestration**
+
+Scope is arrival through release routing, covering intake, data quality, routing, parallel approvals, escalation, and the clinical and financial clearance gates. This is the scope the F1-F24 catalogue, the seven harness passes, and `SYN-CASESET-v1` are all built against.
+
+It is deliberately bounded by §4: no live EHR integration, no payer submissions, no prior-authorisation decisioning, and no autonomous clinical judgement. The scope is wide across *administrative* steps and deliberately narrow on *clinical* ones.
+
+### 13.2 Sample data — **Decided: we generate our own, and it is `SYN-CASESET-v1`**
+
+No external dataset is adopted. [`data/sample/`](data/sample/) holds 20 hand-authored synthetic case documents with a JSON answer key, and [`data/README.md`](data/README.md) carries the provenance statement required by [`docs/constitution.md`](docs/constitution.md) §3.
+
+Generating our own was the right call because the dataset needs seeded conditions an off-the-shelf set would not contain — deliberate omissions across four resolution modes, duplicates, a near-duplicate that must *not* flag, misroute traps, and false-positive traps on `Not applicable` fields. Those traps are what make the error-rate metric meaningful rather than decorative.
+
+### 13.3 Baseline evidence — **Decided: stopwatched manual walkthrough, under a defined protocol**
+
+A stopwatched manual walkthrough is accepted, but only if it is run properly. A single casual timing is not evidence. The protocol is:
+
+| Rule | Requirement |
+|---|---|
+| Same input | Both paths process the identical document from the identical starting state |
+| Same endpoint | Both timed from document arrival to "ready for human approval" — not to final send, which is human-paced and would flatter the agent |
+| Repetition | **3 runs of the manual path**, median reported. Single runs are discarded. |
+| Operator | Manual path performed by someone who has not seen the agent's output for that document |
+| Recording | All timings recorded in the run record with timestamps, alongside the build and dataset versions |
+| Reporting | Claim stated as a **range across the sampled documents**, never as a single headline number |
+
+This is honest about what it is: a small-sample demonstration, not a controlled study. The three-run median and the range-based reporting are what stop it overstating.
+
+### 13.4 Guardrail wording — **Decided: our own, and it is canonical**
+
+No external program language is adopted. The guardrail language for this project is [`docs/constitution.md`](docs/constitution.md) §5 together with the non-negotiable constraints block in [`prompts/specify-prompt.md`](prompts/specify-prompt.md).
+
+Those two sources are canonical. Any safety or compliance wording that appears in a demo, README, slide, or agent response must be traceable to them, and must not soften them. If a program-level standard is issued later, adopting it is a Constitution amendment under §2 and requires Team Lead plus Compliance Reviewer approval.
+
+### 13.5 Packaging — **Decided: out of scope, question withdrawn**
+
+The prior question asked whether routing rules should be customer-configurable "for the marketplace offer". There is no marketplace offer. §4 already excludes multi-tenancy, SSO, and production hosting, so the question contradicted the stated scope.
+
+Routing rules are **fixed and declarative** for this build, held in a config file and readable by a non-technical reviewer per §9. They are not customer-configurable, and configurability is not a deliverable.
