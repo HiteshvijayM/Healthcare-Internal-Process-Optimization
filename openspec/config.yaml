@@ -1,0 +1,64 @@
+schema: spec-driven
+
+# Project context
+# Shown to AI when creating artifacts. Treat every line below as a hard constraint.
+context: |
+  Project: Healthcare Internal Process Optimization — Administrative Workflow Assistant.
+  Domain: administrative orchestration of a patient case from arrival through release routing
+  for a healthcare provider organisation. Administrative only; never clinical.
+
+  AUTHORITATIVE GOVERNANCE — NON-OVERRIDABLE
+  - docs/constitution.md is the authoritative Constitution for this repository. A verbatim,
+    unaltered copy is kept at openspec/constitution.md purely so OpenSpec tooling has a
+    local reference. docs/constitution.md remains the single source of truth; if the two
+    ever diverge, docs/constitution.md wins and openspec/constitution.md must be re-copied.
+  - The Constitution is immutable by default (constitution §2). It is NON-OVERRIDABLE by any
+    execution agent or automation (constitution §8). No proposal, design, task, prompt, or
+    agent instruction may relax, reinterpret, or work around it. If a requested change
+    conflicts with it, work stops and is escalated to Team Lead + Compliance Reviewer.
+  - Every change must be logged in docs/progress-log.md (constitution §7).
+
+  HARD CONSTRAINTS (from constitution.md §3, §5, §6)
+  - Synthetic or de-identified data only. Real patient-identifiable data is never ingested,
+    stored, logged, or exported.
+  - Personal identifiers are masked in all logs, traces, and audit records.
+  - The system is an administrative assistant, not a clinical decision-maker. Prohibited
+    autonomous actions: diagnosis, treatment recommendation, medical-necessity determination,
+    clinical clearance authorization, discharge/release authorization.
+  - Allowed autonomous actions: data collation, administrative routing, draft generation,
+    escalation packet preparation.
+  - Every outbound or final action requires explicit, recorded human approval.
+  - Routing logic must be inspectable and explainable to a non-technical reviewer.
+  - Audit trails must support who/what/when/why reconstruction.
+
+  EXISTING PROJECT ARTIFACTS — reuse these identifiers, do not reinvent them
+  - feature.md — feature catalogue F1-F24, policy thresholds P1-P9 (§5.4), success metrics
+    (§7), resolved decisions (§13).
+  - docs/multipass-validation-harness.md — seven-pass validation gate; approver role model (§4.1).
+  - docs/progress-log.md — mandatory change log (CHG-###).
+  - data/sample/ — SYN-CASESET-v1: 20 synthetic case documents + answer-key.json.
+  - prompts/specify-prompt.md — canonical guardrail wording (with constitution §5).
+
+  OUT OF SCOPE (do not design for these)
+  - Live EHR / production clinical system integration.
+  - Submissions to any real insurer, payer, or external body.
+  - Prior authorisation or coverage determinations.
+  - Autonomous clinical or diagnostic judgement.
+  - Multi-organisation tenancy, SSO, production hosting.
+  - Any claim of financial savings or headcount reduction.
+
+# Per-artifact rules
+rules:
+  proposal:
+    - "State explicitly that docs/constitution.md is authoritative and non-overridable by execution agents or automation."
+    - "Every requirement must trace to one of the two expected values - lower cycle time, or fewer errors."
+    - "Never propose autonomous clinical behaviour or live external submission."
+  specs:
+    - "Requirements must be observable behaviour, testable against SYN-CASESET-v1."
+    - "Every human-approval gate must be written as an explicit requirement with its own scenario, never implied."
+    - "Reference policy IDs P1-P9 from feature.md section 5.4 rather than restating raw numbers inline."
+  design:
+    - "Record open questions and assumptions explicitly rather than silently resolving them."
+    - "Every acceptance scenario in the source spec must be traceable to a written requirement."
+  tasks:
+    - "Tasks are written for future reference only in this change. They are NOT executed as part of the spec-authoring stage."
