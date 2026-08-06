@@ -6,13 +6,13 @@ Makes sure a critical-condition signal reaches a qualified human quickly and com
 
 ### Requirement: Detect critical-condition signals in test and diagnostic inputs
 
-The system SHALL monitor test and diagnostic inputs attached to a case for critical-condition signals defined in a reviewable, human-authored signal list. Detection SHALL be pattern-based against that list and SHALL NOT constitute a diagnosis, a severity assessment, or a clinical interpretation. A detected signal SHALL be recorded against the case with the source input, the matched list entry, and the detection time. The system SHALL NOT suppress, downgrade, or triage a detected signal on its own judgement.
+The system SHALL monitor test and diagnostic inputs attached to a case for **declared** critical-condition markers — criticality asserted by the source document or by the qualified human who produced it — matched against a reviewable, clinician-approved marker list versioned alongside the routing and approval policy. Detection SHALL be pattern-based against that list, SHALL NOT constitute a diagnosis, a severity assessment, or a clinical interpretation, and SHALL NOT infer criticality that the source has not declared. A detected marker SHALL be recorded against the case with the source input, the matched list entry, and the detection time. Where an input carries a criticality-adjacent marker that is absent from the list or whose meaning is ambiguous, the system SHALL fail closed by raising it for human review rather than concluding that it is not critical. The system SHALL NOT suppress, downgrade, or triage a detected signal on its own judgement.
 
 *Traces to F13. Value: fewer errors — a critical finding is not left sitting in an administrative queue.*
 
 #### Scenario: A critical-condition signal is detected
 
-- **WHEN** a test or diagnostic input attached to a case matches an entry in the critical-condition signal list
+- **WHEN** a test or diagnostic input attached to a case carries a declared criticality marker matching an entry in the approved marker list
 - **THEN** the system records the detected signal against the case with the source input, the matched entry, and the detection time
 - **AND** initiates escalation packet preparation
 
@@ -21,6 +21,13 @@ The system SHALL monitor test and diagnostic inputs attached to a case for criti
 - **WHEN** the system records a detected critical-condition signal
 - **THEN** it describes the signal and its source without asserting a diagnosis, severity, or clinical interpretation
 - **AND** it does not filter, downgrade, or triage the signal on its own judgement
+
+#### Scenario: An unrecognised criticality marker fails closed
+
+- **WHEN** a test or diagnostic input carries a criticality-adjacent marker that is absent from the approved marker list or whose meaning is ambiguous
+- **THEN** the system raises the input for human review rather than concluding it is not critical
+- **AND** records the unmatched marker and the reason it could not be classified
+- **AND** makes no determination of the marker's clinical significance itself
 
 ### Requirement: Auto-prepare a complete escalation packet
 
@@ -44,7 +51,7 @@ The system SHALL automatically prepare an escalation packet whenever a critical-
 
 ### Requirement: Route escalation to the designated clinical authority without deciding
 
-The system SHALL route each escalation packet to the clinical authority designated for that case, and SHALL record the acknowledgement when it is received, against the critical acknowledgement target in **P4**. The system SHALL NOT decide clinical urgency, SHALL NOT select a course of action, and SHALL NOT act on the escalation beyond preparing and routing it. Clinical escalation SHALL require the recorded human approval mandated by the `human-approval-control` capability before dispatch, and the escalation SHALL remain visible as an open blocker until acknowledged.
+The system SHALL route each escalation packet to the Clinical Authority role registered in the approver role model, and SHALL record the acknowledgement when it is received, against the critical acknowledgement target in **P4**. Where the primary holder of that role is unavailable, the system SHALL route to the designated deputy or on-call holder of the same role so that the acknowledgement target can still be met, and SHALL record which holder received the packet. The system SHALL NOT decide clinical urgency, SHALL NOT select a course of action, and SHALL NOT act on the escalation beyond preparing and routing it. Clinical escalation SHALL require the recorded human approval mandated by the `human-approval-control` capability before dispatch, and the escalation SHALL remain visible as an open blocker until acknowledged.
 
 *Traces to F13 and constitution §5. Value: fewer errors — the decision stays with a qualified human, and the handoff is provably closed.*
 
@@ -60,6 +67,13 @@ The system SHALL route each escalation packet to the clinical authority designat
 - **WHEN** an escalation packet is ready to dispatch
 - **THEN** the system requires an explicit recorded human approval before it is sent
 - **AND** does not dispatch on its own initiative
+
+#### Scenario: Escalation reaches a deputy when the primary holder is unavailable
+
+- **WHEN** an escalation packet is ready and the primary holder of the Clinical Authority role is unavailable
+- **THEN** the system routes the packet to the designated deputy or on-call holder of that role
+- **AND** records which holder received it
+- **AND** the critical acknowledgement target continues to run rather than being reset
 
 #### Scenario: Acknowledgement is tracked until received
 

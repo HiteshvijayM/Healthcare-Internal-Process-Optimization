@@ -71,7 +71,7 @@ None. `openspec/specs/` is empty — this is the first change in the repository,
 - New: `openspec/changes/administrative-workflow-assistant/` — `proposal.md`, 11 delta specs, `design.md`, `tasks.md`.
 - New: `openspec/constitution.md` — verbatim, unaltered copy of `docs/constitution.md` for OpenSpec tooling.
 - Modified: `openspec/config.yaml` — project context and per-artifact rules encoding the governance constraints.
-- Modified: [`docs/progress-log.md`](../../../docs/progress-log.md) — change entry, recorded assumptions, and the "Needs human decision" list.
+- Modified: [`docs/progress-log.md`](../../../docs/progress-log.md) — change entries, the confirmed assumptions, and the resolved decisions list.
 
 **Traceability to existing project artifacts.** This proposal deliberately reuses, and does not restate or fork, the identifiers already agreed in the repository:
 

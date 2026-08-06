@@ -37,7 +37,7 @@ The system SHALL determine the owning team for each case using declarative routi
 
 ### Requirement: Permit provisional routing only under confidence policy
 
-The system SHALL allow a case with unresolved required data to progress provisionally only when the provisional-routing policy **P1** defined in `feature.md` §5.4 is satisfied. When the policy is not satisfied, the system SHALL hold progression and prepare targeted requests for the missing information instead. A provisionally routed case SHALL be clearly and persistently marked as provisional, SHALL list the unresolved fields that made it provisional, and SHALL be re-evaluated whenever new data arrives. Provisional status SHALL NOT satisfy any clearance gate and SHALL NOT permit release routing.
+The system SHALL allow a case with unresolved required data to progress provisionally only when the provisional-routing policy **P1** defined in `feature.md` §5.4 is satisfied. When the policy is not satisfied, the system SHALL hold progression and prepare targeted requests for the missing information instead. A provisionally routed case SHALL be clearly and persistently marked as provisional, SHALL list the unresolved fields that made it provisional, and SHALL be re-evaluated whenever new data arrives. Provisional status SHALL NOT satisfy any clearance gate and SHALL NOT permit release routing. Where re-evaluation after the missing data arrives yields a different owning team from the provisional one, the system SHALL re-route the case, notify the team it was originally routed to, mark work already performed in that team as void while retaining it in the audit trail rather than deleting it, and count the reversal against the rework limit **P6** defined in `feature.md` §5.4; exceeding **P6** SHALL escalate the case to the Team Lead.
 
 *Traces to F6. Value: lower cycle time — eligible work advances instead of queueing, without advancing unsafely.*
 
@@ -61,6 +61,14 @@ The system SHALL allow a case with unresolved required data to progress provisio
 - **THEN** the system re-runs the completeness check and re-evaluates routing
 - **AND** clears the provisional flag once no unresolved required fields remain
 - **AND** records both the provisional period and its resolution in the audit trail
+
+#### Scenario: A provisional route proves wrong and is reversed
+
+- **WHEN** re-evaluation of a provisionally routed case yields a different owning team
+- **THEN** the system re-routes the case to the corrected team
+- **AND** notifies the team it was originally routed to that the case has moved
+- **AND** marks work already performed in the original queue as void while retaining it in the audit trail
+- **AND** counts the reversal against the rework limit
 
 #### Scenario: Provisional status cannot satisfy a gate
 

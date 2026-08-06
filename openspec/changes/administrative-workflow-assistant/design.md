@@ -87,7 +87,7 @@ Acceptance scenario 11 reads as a sequence. The `clearance-and-release-gates` ca
 
 *Rationale.* A conservative literal reading of the acceptance scenario. If financial clearance could be granted first, a case could accrue financial approval it should never have been eligible for, and the rework is worse than the wait.
 
-*Open point.* Whether the ordering is a genuine business rule or an artifact of how scenario 11 was written is recorded in Open Questions below. This design adopts the strict reading and flags it rather than assuming the looser one.
+*Resolved.* The ordering is confirmed as a genuine business rule (Resolved Decision 4): financial clearance ahead of clinical clearance would authorise spend against a procedure not yet clinically approved. The strict reading is retained.
 
 ### Decision 6: Bind every accuracy and speed claim to a protocol and a version
 
@@ -144,11 +144,11 @@ The non-negotiable constraints are likewise covered: synthetic-data-only and ide
 
 ## Risks / Trade-offs
 
-**[The critical-condition signal taxonomy is undefined] → Mitigation:** the `clinical-escalation` capability specifies detection behaviour, packet completeness under **P3**, and routing, but deliberately does not enumerate what counts as critical. That list is safety-bearing and must be authored and signed off by a qualified clinician. It is raised in Open Questions and must be resolved before implementation begins, not during it.
+**[The critical-condition signal taxonomy is undefined] → Resolved:** detection was recast as **declared**-criticality matching (Resolved Decision 2). The agent matches markers the source has already asserted, never infers criticality, and fails closed to human review on unrecognised or ambiguous markers. The residual risk — an approved marker list that is incomplete — is bounded by the fail-closed rule and by clinician sign-off of the list, which remains a prerequisite task.
 
 **[Provisional routing could quietly become permanent] → Mitigation:** the provisional flag is required to be prominent in both list and detail views, to enumerate the unresolved fields that caused it, and to block release eligibility outright. The shortcut cannot survive to the point of harm.
 
-**[Strict clinical-then-financial ordering may be wrong] → Mitigation:** the conservative reading is adopted and explicitly flagged in Open Questions. If the intended rule is that both are required without ordering, only the `clearance-and-release-gates` capability changes, and the change is small and localised.
+**[Strict clinical-then-financial ordering may be wrong] → Resolved:** confirmed as a real business rule (Resolved Decision 4), because financial clearance ahead of clinical clearance would authorise spend against a procedure not yet clinically approved. The conservative reading and the correct reading coincide.
 
 **[Numeric targets adopted from `feature.md` §7 may not be what the brief author intended] → Mitigation:** every resolution is tabulated in Decision 7 and recorded as an assumption in `docs/progress-log.md` under "Assumptions — flag for review". None is buried inside a requirement.
 
@@ -166,26 +166,26 @@ The non-negotiable constraints are likewise covered: synthetic-data-only and ide
 
 No migration is required. This change introduces eleven new capabilities and modifies none, so there is no existing specified behaviour to transition, no data to move, and no consumer to notify.
 
-The sequencing that follows *approval* of this specification — not part of this change — is: resolve the Open Questions below, then design architecture in a separate change, then implement in the priority order recorded in `feature.md` §6, validating each increment against `SYN-CASESET-v1` through the `evaluation-harness` capability. The safety-bearing capabilities (`safety-boundary`, `clinical-escalation`, `clearance-and-release-gates`, `human-approval-control`) should be implemented and verified before any capability that could cause an outbound action.
+The sequencing that follows *approval* of this specification — not part of this change — is: design architecture in a separate change, then implement in the priority order recorded in `feature.md` §6, validating each increment against `SYN-CASESET-v1` through the `evaluation-harness` capability. The Resolved Decisions below carry two prerequisite artifacts into `tasks.md` group 1: the prior-records fixture and the clinician-approved criticality marker list. The safety-bearing capabilities (`safety-boundary`, `clinical-escalation`, `clearance-and-release-gates`, `human-approval-control`) should be implemented and verified before any capability that could cause an outbound action.
 
-## Open Questions
+## Resolved Decisions
 
-These need a human decision. None was answered unilaterally; each is carried into `docs/progress-log.md` under "Needs human decision".
+All nine questions raised during authoring have been answered. Four were settled decisively by evidence already in the repository (`data/sample/answer-key.json`, `data/README.md`, `feature.md` §5.4, harness §4.1) rather than by preference. Each answer is recorded in `docs/progress-log.md` under "Resolved decisions".
 
-1. **Backfill record source.** F3 and acceptance scenario 2 require backfilling from existing records, but `SYN-CASESET-v1` contains only inbound cases — there is no prior-records store to backfill *from*. A synthetic prior-records fixture must be defined, or the backfill requirement must be rescoped. **Owner: Team Lead.**
+1. **Backfill record source — resolved.** Backfill reads from two tiers: the **processed-case history** indexed on patient reference, and a **declared prior-records fixture** for patient references with no earlier processed case. `data/sample/answer-key.json` confirms both shapes are needed — CASE-014 backfills `ordering_reference` from the CASE-009 record for the same patient reference, which the history tier serves, while CASE-002, CASE-011 and CASE-017 cite external stores that do not exist as fixtures and therefore require the fixture tier. Rescoping the requirement was rejected because it would strand acceptance scenario 2 and four dataset cases. The fixture itself is a data artifact and is tasked, not authored here.
 
-2. **Critical-condition signal taxonomy.** What constitutes a "critical condition signal" in test or diagnostic inputs is nowhere defined. This is safety-bearing and requires a clinician-authored, clinician-reviewed list. **Owner: Compliance Reviewer with clinical input.**
+2. **Critical-condition signal taxonomy — resolved by recasting detection.** The agent detects **declared** criticality — markers asserted by the source document or by the qualified human who produced it — and never infers clinical criticality. This matches CASE-008, whose source carries an explicit critical result flag and whose answer key records that interpreting that flag is a Sev 0 failure. Detection is therefore string matching against a clinician-approved marker list, not clinical reasoning, and unrecognised or ambiguous markers fail closed to human review. This removes the clinical-authorship blocker without the agent making a clinical judgement: clinician sign-off narrows from authoring a clinical taxonomy to approving a marker list.
 
-3. **Is Legal a clearance gate or approval-only?** F16 and F17 name clinical and financial clearance. Legal appears in the parallel approval set but not as a gate. This design assumes Legal is approval-only and not a release gate. **Owner: Team Lead.**
+3. **Legal is approval-only, not a release gate — confirmed.** F16, F17 and F18 name only clinical and financial clearance as release gates. Legal stays in the parallel approval set. No specification change.
 
-4. **Clinical-then-financial clearance ordering.** Acceptance scenario 11 reads as a strict sequence and this design enforces it as one (Decision 5). Confirm whether the ordering is a real business rule or incidental phrasing. **Owner: Compliance Reviewer.**
+4. **Clinical-then-financial clearance ordering is a real business rule — confirmed.** Financial clearance granted before clinical clearance would authorise spend against a procedure not yet clinically approved. The strict reading of acceptance scenario 11 is retained because it is also the fail-safe one. No specification change.
 
-5. **Designated clinical authority routing table.** F13 requires escalation to "the designated clinical authority", but which authority receives which case is undefined. A routing table keyed on case attributes is needed. **Owner: Team Lead with clinical input.**
+5. **Clinical authority routing — resolved; no routing table required.** Harness §4.1 registers a single **Clinical Authority** role and the answer key names one escalation target, so escalations route to that role rather than through an attribute-keyed table. A deputy or on-call holder of the same role is added so the **P4** thirty-minute critical acknowledgement remains achievable when the primary holder is unavailable; separation-of-duty under §4.1 continues to apply.
 
-6. **Retention period gap.** Policy **P8** sets a minimum retention that is shorter than a production healthcare deployment would require. `feature.md` records this as out of scope, but it remains visible in the specification and should carry an explicit decision rather than an omission. **Owner: Compliance Reviewer.**
+6. **Retention gap — resolved; keep the P8 floor, state the gap.** Retention stays at project lifetime with a ninety-day minimum, explicitly labelled a synthetic-data project value rather than a production healthcare retention posture. Raising it is a deployment-time decision for the Compliance Reviewer and is out of scope here. `audit-and-compliance-trail` already requires the gap to be stated wherever retention is documented, so no specification change is needed.
 
-7. **Approval service-level baseline.** The success criteria require approval SLA compliance to "improve", but no manual SLA baseline exists to improve against. Either a baseline must be measured under the `feature.md` §13.3 protocol, or the criterion must be restated as an absolute target. **Owner: Team Lead.**
+7. **Approval service-level baseline — resolved as an absolute target.** No manual SLA baseline exists, and measuring one under the `feature.md` §13.3 protocol is disproportionate to the value. The criterion is restated absolutely: at least ninety percent of approvals actioned within the **P4** targets, **P5** early warnings issued for every approaching breach, and zero unapproved sends. All three are measurable directly against `SYN-CASESET-v1`. The §13.3 manual baseline remains in force for the cycle-time metric only.
 
-8. **Provisional routing reversal procedure.** If a case routed provisionally under **P1** later proves to have been routed wrongly, the recall and re-route procedure — and what happens to work already performed in the wrong queue — is unspecified. **Owner: Team Lead.**
+8. **Provisional routing reversal — resolved.** When re-evaluation yields a different owning team, the case is re-routed, the original team is notified, work already performed there is marked void but retained in the audit trail rather than deleted, and the reversal counts against the **P6** rework limit, with exceedance escalating to the Team Lead. Retention rather than deletion is required by the append-only audit model.
 
-9. **Near-duplicate detection sensitivity.** Policy **P2** defines duplicate detection as exact-tuple matching within the defined window, but `SYN-CASESET-v1` includes a deliberate near-duplicate guard case that exact matching would not catch. Either the near-duplicate threshold must be defined, or the guard case's expected outcome must be confirmed as "not flagged". **Owner: Team Lead.**
+9. **Near-duplicate sensitivity — resolved by the answer key; no fuzzy threshold.** **P2** exact-tuple matching within the window, with arrival channel excluded, since CASE-018 records that a different channel does not make a request new. The CASE-017 guard case states outright that it must not be flagged, and exact-tuple matching already produces that outcome. Introducing a similarity threshold was rejected: it would generate exactly the false positive the guard case exists to catch.

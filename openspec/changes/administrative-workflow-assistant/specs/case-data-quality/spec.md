@@ -63,7 +63,7 @@ The system SHALL, when mandatory data remains unresolved after record backfill, 
 
 ### Requirement: Detect and flag probable duplicate submissions
 
-The system SHALL compare each arriving case against cases already in progress and SHALL flag a probable duplicate rather than reprocessing it. Duplicate matching SHALL apply the duplicate-detection policy **P2** defined in `feature.md` §5.4, and SHALL be independent of the arrival channel, so that a resend of the same request through a different channel is still recognised. A flagged duplicate SHALL be held for human confirmation and SHALL NOT be advanced, routed, or worked as a new case. A case that resembles but is not a duplicate SHALL NOT be flagged.
+The system SHALL compare each arriving case against cases already in progress and SHALL flag a probable duplicate rather than reprocessing it. Duplicate matching SHALL apply the duplicate-detection policy **P2** defined in `feature.md` §5.4 as an exact match on the policy-defined attribute tuple within the policy window, and SHALL be independent of the arrival channel, so that a resend of the same request through a different channel is still recognised. The system SHALL NOT apply similarity or fuzzy matching beyond that tuple, so that a case sharing a sender with an in-progress case but differing on patient reference or requested service is not flagged. A flagged duplicate SHALL be held for human confirmation and SHALL NOT be advanced, routed, or worked as a new case. A case that resembles but is not a duplicate SHALL NOT be flagged.
 
 *Traces to F8. Value: fewer errors — the same request is not worked twice.*
 

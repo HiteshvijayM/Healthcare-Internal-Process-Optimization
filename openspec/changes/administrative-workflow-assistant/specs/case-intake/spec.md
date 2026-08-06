@@ -52,7 +52,7 @@ The system SHALL produce, for each registered case, a structured case record con
 
 ### Requirement: Backfill missing required fields from available records
 
-The system SHALL, before requesting information from any human, search the available records for values that can reliably fill required fields left absent by extraction. Every backfilled value SHALL be tagged with its provenance — the record consulted, the match basis, and the time of lookup — and SHALL be distinguishable from a value extracted from the arriving document. The system SHALL backfill a field only when the match basis meets the configured reliability policy; a weak or ambiguous match SHALL leave the field absent rather than fill it.
+The system SHALL, before requesting information from any human, search the available records for values that can reliably fill required fields left absent by extraction. The available records SHALL comprise the processed-case history, indexed on patient reference and covering cases already processed in the same environment, together with a declared prior-records fixture supplying values for patient references that have no earlier processed case. Every backfilled value SHALL be tagged with its provenance — the record consulted, the match basis, and the time of lookup — and SHALL be distinguishable from a value extracted from the arriving document. The system SHALL backfill a field only when the match basis meets the configured reliability policy; a weak or ambiguous match SHALL leave the field absent rather than fill it. The absence of any consultable record source SHALL leave the field absent and SHALL NOT be treated as licence to infer a value.
 
 *Traces to F3. Value: both — removes a chase-the-sender round trip (cycle time) and avoids wrong values (errors).*
 
@@ -63,6 +63,13 @@ The system SHALL, before requesting information from any human, search the avail
 - **AND** every value it can reliably resolve is filled in and tagged with its provenance
 - **AND** backfilled values are distinguishable from values extracted from the arriving document
 - **AND** the fields that remain unresolved after backfill are carried forward explicitly
+
+#### Scenario: A field is backfilled from an earlier processed case
+
+- **WHEN** a required field is absent and an earlier processed case holds that field for the same patient reference
+- **THEN** the system fills the field from that earlier case
+- **AND** the provenance names the source case identifier and the patient-reference match basis
+- **AND** the value is marked as backfilled rather than extracted
 
 #### Scenario: An ambiguous record match does not backfill
 

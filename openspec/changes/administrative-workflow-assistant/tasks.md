@@ -3,25 +3,22 @@
 > This change delivers **specification artifacts only** — proposal, delta specs, design and this
 > breakdown. No application code, schema, service, prompt or configuration is written here, and
 > `openspec apply` must not be run against this change until the specification has been reviewed
-> and approved by a human, and the gating questions in group 1 have been answered.
+> and approved by a human.
 >
-> Group 1 exists because `design.md` records nine Open Questions. Several of them change *what
-> gets built*, so they are modelled as blocking tasks rather than resolved by assumption. Groups 2
-> onward must not begin until group 1 is complete.
+> The nine questions raised during authoring are now answered and recorded as Resolved Decisions in
+> `design.md`. Group 1 no longer gates on decisions; it carries the two concrete artifacts those
+> decisions created — the prior-records fixture and the clinician-approved criticality marker list —
+> plus the role and wording follow-ups. Groups 2 onward still must not begin until group 1 is
+> complete, because the fixture and the marker list are inputs to behaviour, not consequences of it.
 
-## 1. Resolve gating decisions before any implementation
+## 1. Prerequisites carried from the resolved decisions
 
-- [ ] 1.1 Confirm or correct the seven qualitative-to-numeric resolutions tabulated in `design.md` Decision 7, and record the outcome in `docs/progress-log.md`
-- [ ] 1.2 Define the synthetic prior-records fixture that F3 backfill reads from, or rescope the backfill requirement (Open Question 1)
-- [ ] 1.3 Obtain a clinician-authored, clinician-reviewed critical-condition signal taxonomy for F13 detection (Open Question 2, safety-bearing)
-- [ ] 1.4 Confirm whether Legal is a release clearance gate or approval-only (Open Question 3)
-- [ ] 1.5 Confirm whether clinical-then-financial clearance ordering is a business rule or incidental phrasing (Open Question 4)
-- [ ] 1.6 Define the designated clinical authority routing table keyed on case attributes (Open Question 5)
-- [ ] 1.7 Record an explicit decision on the P8 retention gap versus production requirements (Open Question 6)
-- [ ] 1.8 Establish an approval service-level baseline under the `feature.md` §13.3 protocol, or restate the criterion as an absolute target (Open Question 7)
-- [ ] 1.9 Define the provisional routing reversal and recall procedure, including disposition of work already done in the wrong queue (Open Question 8)
-- [ ] 1.10 Define near-duplicate detection sensitivity, or confirm the `SYN-CASESET-v1` guard case is expected not to be flagged (Open Question 9)
-- [ ] 1.11 Obtain human approval of this specification and record the approval in `docs/progress-log.md`
+- [ ] 1.1 Author the prior-records fixture that backfill reads from when a patient reference has no earlier processed case, covering at minimum the values CASE-002, CASE-011 and CASE-017 cite (Resolved Decision 1)
+- [ ] 1.2 Obtain a clinician-approved criticality marker list of declared markers, and version it alongside the routing and approval policy (Resolved Decision 2, safety-bearing)
+- [ ] 1.3 Name the deputy or on-call holder of the Clinical Authority role so the **P4** critical acknowledgement target stays achievable when the primary holder is unavailable (Resolved Decision 5)
+- [ ] 1.4 Replace the relative "approval SLA compliance improves" wording in `feature.md` §7 with the absolute criterion recorded in Resolved Decision 7
+- [ ] 1.5 Record the P8 retention gap statement as a standing caveat wherever retention is documented or demonstrated (Resolved Decision 6)
+- [ ] 1.6 Obtain human approval of this specification and record the approval in `docs/progress-log.md`
 
 ## 2. Architecture and foundations
 
