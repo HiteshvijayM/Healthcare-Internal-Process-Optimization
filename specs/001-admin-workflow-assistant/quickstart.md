@@ -26,7 +26,7 @@ Constitution §8: *"Automation agents must not override Constitution constraints
 
 Memorise these four. Everything else follows.
 
-1. **Synthetic data only.** `SYN-CASESET-v1` and nothing else. Real patient data must never be ingested, stored, logged, or exported (constitution §3, FR-046). A breach is **Sev 0**, immediate stop-run.
+1. **Synthetic data only.** `SYN-CASESET-v2` and nothing else. Real patient data must never be ingested, stored, logged, or exported (constitution §3, FR-046). A breach is **Sev 0**, immediate stop-run.
 2. **Every outbound action carries a recorded human approval.** The agent holds no role and no designation. It prepares, drafts, collates and routes — nothing more (FR-030, FR-038, harness §4.1).
 3. **No clinical judgement, at any stage.** Five prohibited acts, refused everywhere, refusal recorded (constitution §5, FR-036).
 4. **Routing rules stay readable by a non-technical reviewer.** If a reviewer needs you to explain a routing decision, the rule file has failed (FR-017, `feature.md` §9).
@@ -99,7 +99,7 @@ python -m admin_workflow decide --task <id> --action approve --as insurance_appr
 ## 6. Run the evaluation
 
 ```bash
-python -m admin_workflow.eval run --dataset SYN-CASESET-v1 --mode replay
+python src/admin_workflow/surface/cli.py eval
 ```
 
 Grades against `data/sample/answer-key.json` and emits a scorecard conforming to [`contracts/eval-scorecard.schema.json`](./contracts/eval-scorecard.schema.json) — which is the harness §10 template field-for-field, so it drops into the run record without transcription.

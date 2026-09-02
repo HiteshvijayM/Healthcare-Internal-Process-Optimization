@@ -219,6 +219,41 @@ def test_as7_second_true_duplicate_pair(runtime, repo_root) -> None:
     result = intake(runtime, repo_root, "CASE-018")
     assert result.case.duplicate_flag is not None
     assert result.case.duplicate_flag.matched_case_id == "CASE-016"
+    assert result.case.duplicate_flag.matcher.value == "key_match"
+
+
+def test_as7_post_window_resend_of_a_closed_case_is_caught_by_identity(runtime, repo_root) -> None:
+    """CASE-021 — the fixture the key matcher structurally cannot catch.
+
+    An exact re-fax arriving 39 days after CASE-014, against a case that is
+    already closed. The 72-hour window has long shut and the key matcher's scope
+    excludes closed cases, so only the unbounded identity matcher can see it.
+    This is the clinical re-fax on day five that FR-055 exists for.
+    """
+    intake(runtime, repo_root, "CASE-014")
+    runtime.index[-1] = runtime.index[-1].__class__(
+        **{**runtime.index[-1].__dict__, "closed": True}
+    )
+    result = intake(runtime, repo_root, "CASE-021")
+    assert result.case.duplicate_flag is not None, "identity matcher failed to fire"
+    assert result.case.duplicate_flag.matched_case_id == "CASE-014"
+    assert result.case.duplicate_flag.matcher.value == "identity_match"
+    assert "duplicate_adjudication" in result.awaiting
+
+
+def test_as7_same_key_different_content_outside_the_window_is_not_flagged(runtime, repo_root) -> None:
+    """CASE-022 — the negative direction of the identity matcher.
+
+    Same sender, same patient reference, same requested service as CASE-016, but
+    a genuinely different request under a new order reference, 30 days later.
+    Flagging it would mean the normaliser is erasing real content differences —
+    exactly what FR-055's 'a difference in any retained content MUST prevent one'
+    forbids.
+    """
+    intake(runtime, repo_root, "CASE-016")
+    result = intake(runtime, repo_root, "CASE-022")
+    assert result.case.duplicate_flag is None
+    assert result.routing.queue.value == "Diagnostics"
 
 
 # ===========================================================================
@@ -283,6 +318,28 @@ def test_as10_case020_carries_urgency_only_and_must_not_escalate(runtime, repo_r
     result = intake(runtime, repo_root, "CASE-020")
     assert not result.case.critical_signal_active
     assert result.escalation is None
+
+
+def test_as10_laboratory_critical_value_matches_ccs003(runtime, repo_root) -> None:
+    """CASE-023 — the only fixture that exercises CCS-003.
+
+    Until this existed, a safety-bearing register entry sat unexercised while the
+    register read as fully covered.
+    """
+    result = intake(runtime, repo_root, "CASE-023")
+    assert result.case.critical_signal_active
+    assert result.case.matched_signal_ids == ["CCS-003"]
+    assert isinstance(result.escalation, DispatchApproval)
+
+
+def test_as10_ccs003_packet_never_reports_a_numeric_result(runtime, repo_root) -> None:
+    """The laboratory's marker is the signal. The value behind it is a clinical
+    fact the assistant must never read, compare or repeat."""
+    result = intake(runtime, repo_root, "CASE-023")
+    description = result.packet.critical_signal_description
+    assert "critical value" in description.lower()
+    assert not any(ch.isdigit() for ch in description.replace("CCS-003", "")), \
+        "no numeric result may appear in the packet description"
 
 
 def test_as10_non_match_never_claims_no_critical_condition(runtime, repo_root) -> None:

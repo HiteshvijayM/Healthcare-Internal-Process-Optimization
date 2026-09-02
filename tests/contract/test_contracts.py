@@ -94,6 +94,37 @@ def test_register_yaml_mirrors_the_authoritative_markdown(repo_root: Path, bundl
         assert not missing, f"{entry_id}: YAML markers absent from the authoritative markdown: {missing}"
 
 
+def test_register_metadata_does_not_contradict_the_markdown(repo_root: Path, bundle) -> None:
+    """CRC-1 extends to metadata, not only to IDs and markers.
+
+    An earlier revision left ``fixture_coverage: none`` on CCS-003 while the
+    markdown had been updated to state that every entry is exercised. Comparing
+    only IDs and markers let a bundle-governed file assert the opposite of the
+    artifact it mirrors — and because the YAML is the file the matcher loads and
+    the lock file hashes, that contradiction was frozen into the bundle.
+    """
+    text = (repo_root / "docs" / "critical-condition-register.md").read_text(encoding="utf-8")
+    claims_full_coverage = "Every register entry is exercised in the positive direction" in text
+    for entry in bundle.critical_signal_register["entries"]:
+        coverage = entry.get("fixture_coverage")
+        if claims_full_coverage:
+            assert coverage != "none", (
+                f"{entry['id']} carries fixture_coverage: none while the authoritative markdown "
+                "claims every entry is exercised. One of the two is wrong."
+            )
+        if isinstance(coverage, list):
+            for case_id in coverage:
+                assert (repo_root / "data" / "sample" / f"{case_id}.md").exists(), \
+                    f"{entry['id']} names fixture {case_id}, which does not exist"
+
+
+def test_register_stale_section_references(repo_root: Path, bundle) -> None:
+    """A comment pointing at a deleted section is a dangling reference like any other."""
+    raw = (bundle.root / "critical-signal-register.yaml").read_text(encoding="utf-8")
+    assert "Known coverage gap" not in raw, \
+        "the register mirror references a markdown section that no longer exists"
+
+
 def test_register_id_matches_the_policy_table(bundle) -> None:
     assert bundle.critical_signal_register["register_id"] == bundle.register_id
 

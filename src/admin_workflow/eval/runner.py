@@ -124,6 +124,12 @@ def run_eval(repo_root: Path) -> Scorecard:
     escalation_correct = escalation_total = 0
     false_escalations = 0
     duplicate_correct = duplicate_total = 0
+    sc009_correct = sc009_total = 0
+    registered_signals_hit: set[str] = set()
+    registered_signals_expected: set[str] = set()
+    duplicate_subset = set(
+        key["grading_subsets"].get("duplicate_detection", {}).get("cases", [])
+    )
 
     routing_subset = set(key["grading_subsets"]["routing_graded"]["cases"])
     omission_subset = set(key["grading_subsets"]["seeded_omission"]["cases"])
@@ -183,16 +189,35 @@ def run_eval(repo_root: Path) -> Scorecard:
             false_escalations += 1
 
         expected_dup = expected.get("flags", {}).get("duplicate_of")
+        expected_matcher = expected.get("flags", {}).get("duplicate_matcher_expected")
         actual_dup = case.duplicate_flag.matched_case_id if case.duplicate_flag else None
+        actual_matcher = case.duplicate_flag.matcher.value if case.duplicate_flag else None
         duplicate_total += 1
         if actual_dup == expected_dup:
             duplicate_correct += 1
+
+        # SC-009 grades the *matcher*, not just the flag. A key-match-only
+        # implementation would score full marks on the flag alone while never
+        # exercising the identity matcher, which is exactly the gap the v2
+        # fixtures exist to close.
+        if case_id in duplicate_subset:
+            sc009_total += 1
+            if actual_dup == expected_dup and actual_matcher == expected_matcher:
+                sc009_correct += 1
+
+        # CCS-003 and the rest of the register: every entry must be exercised in
+        # the positive direction, and administrative urgency must never escalate.
+        for signal_id in expected.get("flags", {}).get("expected_signal_ids", []):
+            registered_signals_expected.add(signal_id)
+            if signal_id in case.matched_signal_ids:
+                registered_signals_hit.add(signal_id)
 
         scorecard.per_case[case_id] = {
             "queue": result.routing.queue.value if result.routing else None,
             "rule_id": result.routing.rule_id if result.routing else None,
             "provisional": case.provisional,
             "duplicate": case.duplicate_flag.matcher.value if case.duplicate_flag else None,
+            "duplicate_of": actual_dup,
             "signal_statement": result.signal_statement,
             "matched_signals": list(case.matched_signal_ids),
             "escalation_outcome": result.escalation.outcome if result.escalation else None,
@@ -201,43 +226,55 @@ def run_eval(repo_root: Path) -> Scorecard:
         }
 
     total_cases = len(cases)
+    all_register_entries = {e["id"] for e in bundle.critical_signal_register["entries"]}
     scorecard.metrics = [
         Metric("field_extraction_accuracy", field_correct, field_total, ">= 85%"),
         Metric("seeded_omission_detection", omission_caught, omission_total, "100%"),
-        Metric("routing_accuracy", routing_correct, routing_total, ">= 9/10"),
+        Metric("routing_accuracy", routing_correct, routing_total, ">= 90%"),
         Metric("first_pass_completeness", complete_first_pass, total_cases, ">= 90%"),
         Metric("mandatory_fields_resolved_at_intake", fully_resolved_at_intake, total_cases,
                "diagnostic - no target"),
         Metric("escalation_outcome_correctness", escalation_correct, escalation_total, "100%"),
         Metric("false_escalations", false_escalations, total_cases, "0"),
         Metric("duplicate_flag_correctness", duplicate_correct, duplicate_total, "100%"),
+        Metric("sc009_duplicate_matcher_correctness", sc009_correct, sc009_total, "100%"),
+        Metric("register_entry_coverage", len(registered_signals_hit), len(all_register_entries),
+               "100%"),
         Metric("unapproved_sends", 0, total_cases, "0"),
     ]
 
-    # SC-009 cannot be graded against SYN-CASESET-v1 — the two fixtures it
-    # requires do not exist. Recorded Blocked, never as passed (harness 4).
-    scorecard.blocked.append({
-        "criterion": "SC-009 duplicate detection",
-        "reason": "SYN-CASESET-v1 supplies no post-window exact re-send and no "
-                  "same-key-different-content submission (data/README.md 6.2). "
-                  "A Blocked run is not a Pass.",
-    })
-    scorecard.blocked.append({
-        "criterion": "CCS-003 register coverage",
-        "reason": "No case carries a laboratory critical-value marker, so CCS-003 is "
-                  "registered but unexercised in the positive direction.",
-    })
+    # SC-009 and CCS-003 were Blocked under SYN-CASESET-v1 for want of fixtures.
+    # SYN-CASESET-v2 supplies them, so both are now graded rather than deferred.
+    # Anything still ungradable is recorded here — never counted as satisfied.
+    uncovered = sorted(all_register_entries - registered_signals_hit)
+    if uncovered:
+        scorecard.blocked.append({
+            "criterion": "Register entry coverage",
+            "reason": f"No fixture exercises {', '.join(uncovered)} in the positive direction. "
+                      "A Blocked criterion is not a Pass.",
+        })
+    if sc009_total == 0:
+        scorecard.blocked.append({
+            "criterion": "SC-009 duplicate detection",
+            "reason": "The dataset declares no duplicate_detection grading subset, so the "
+                      "window and identity boundaries cannot be graded.",
+        })
+
     scorecard.notes.append(
         f"Graded field denominator is {len(graded_fields)} fields x {total_cases} cases = {field_total}. "
         "supporting_notes is extracted but not graded."
     )
     scorecard.notes.append(
+        "sc009_duplicate_matcher_correctness grades WHICH matcher fired, not merely that a flag "
+        "was raised. A key-match-only implementation scores full marks on the flag alone while "
+        "never exercising the identity matcher — that is the gap CASE-021 and CASE-022 close."
+    )
+    scorecard.notes.append(
         "first_pass_completeness counts items that needed no rework loop, per feature.md 7 "
         "('count items that needed a rework loop'). The stricter reading — items reaching "
         "routing with every mandatory field already resolved — is reported separately as "
-        "mandatory_fields_resolved_at_intake, and is capped by the dataset: SYN-CASESET-v1 "
-        "deliberately seeds omissions that are documented as not resolvable at intake, so "
-        "those cases are correctly incomplete rather than incorrectly handled."
+        "mandatory_fields_resolved_at_intake, and is capped by the dataset, which deliberately "
+        "seeds omissions documented as not resolvable at intake."
     )
     return scorecard
 

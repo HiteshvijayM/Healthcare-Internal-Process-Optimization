@@ -42,9 +42,9 @@ entries:
       - "panic value"
       - "critical value notification"
     clinical_owner: clinical_authority
-    # No fixture in SYN-CASESET-v1. Registered but unexercised — see
-    # docs/critical-condition-register.md 3 "Known coverage gap".
-    fixture_coverage: none
+    # Exercised by CASE-023 in SYN-CASESET-v2. See
+    # docs/critical-condition-register.md section 3.
+    fixture_coverage: [CASE-023]
     never_evaluate_numeric_value: true
 
 excluded_explicitly:                  # recorded so the boundary is visible, register 2

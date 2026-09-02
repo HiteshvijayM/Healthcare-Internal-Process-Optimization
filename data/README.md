@@ -2,7 +2,7 @@
 
 ## 1. Provenance Statement
 
-**Every document in this dataset is synthetic.** It was authored by hand for this project. It is not derived from, sampled from, anonymised from, or inspired by any real patient record, any real clinical system, or any real organisation.
+**Every document in this dataset is synthetic.** It was authored by hand for this project. It is not derived from, sampled from, anonymised from, or inspired by any real patient record, any real clinical system, or any real organisation. This applies to every case in `SYN-CASESET-v2`, including the three added in v2.
 
 - No real patient data was accessed, ingested, transformed, or referenced at any point.
 - All patient references use the reserved synthetic prefix `SYN-PT-`.
@@ -17,10 +17,20 @@ If a document in `sample/` ever fails to meet the statement above, it is a **Sev
 
 | Field | Value |
 |---|---|
-| Dataset ID | `SYN-CASESET-v1` |
-| Case count | 20 (`CASE-001` … `CASE-020`) |
+| Dataset ID | `SYN-CASESET-v2` |
+| Supersedes | `SYN-CASESET-v1` (cases 001-020 unchanged) |
+| Case count | 23 (`CASE-001` … `CASE-023`) |
 | Document format | Markdown, simulating inbound email and fax-cover administrative requests |
 | Answer key | [`sample/answer-key.json`](sample/answer-key.json) |
+
+**What v2 added and why.** `SYN-CASESET-v1` left three coverage gaps that made two success criteria ungradable — recorded honestly as **Blocked** rather than quietly counted as passed. `v2` adds exactly three cases to close them, and changes nothing else:
+
+| Case | Closes |
+|---|---|
+| **CASE-021** | SC-009 positive direction — an exact re-fax arriving 39 days after `CASE-014`, against a **closed** case. The 72-hour key window has shut and the key matcher's scope excludes closed cases, so **only** the unbounded identity matcher can catch it. Without this fixture a key-match-only implementation passes SC-009 by accident. |
+| **CASE-022** | SC-009 negative direction — same sender, patient reference *and* requested service as `CASE-016`, but genuinely different content under a new order reference, 30 days later. Must **not** be flagged. Without this fixture an over-broad content normaliser goes undetected. |
+| **CASE-023** | CCS-003 positive direction — the only laboratory critical-value notification in the dataset. Without it a safety-bearing register entry sat unexercised while the register read as fully covered. |
+
 
 Scanned and OCR documents are deliberately **not** included. Per [`prompts/specify-prompt.md`](../prompts/specify-prompt.md) §3, text-layer documents come first; OCR is a later addition once the clean path works.
 
@@ -58,30 +68,34 @@ The answer key defines which cases feed which metric in [`feature.md`](../featur
 
 | Metric | Cases | Count |
 |---|---|---|
-| Field extraction accuracy (≥ 85%) | All cases, 7 graded fields each (n = 140) | 20 |
-| Missing-field detection (catch every seeded omission) | `seeded_omission` subset | 10 |
-| Routing accuracy (≥ 9/10) | `routing_graded` subset, covering all five queues | 10 |
+| Field extraction accuracy (≥ 85%) | All cases, 7 graded fields each (n = 161) | 23 |
+| Missing-field detection (catch every seeded omission) | `seeded_omission` subset | 11 |
+| Routing accuracy (≥ 90%) | `routing_graded` subset, covering all five queues | 12 |
+| SC-009 duplicate detection (100%) | `duplicate_detection` subset — both boundaries, both directions | 8 |
+| Register entry coverage (100%) | `critical_signal` subset — every CCR-DEMO-v1 entry | 4 |
 
 ## 6. Seeded Conditions
 
 | Condition | Cases |
 |---|---|
-| Seeded omissions | CASE-002, 003, 004, 011, 012, 013, 014, 017, 019, 020 |
-| — resolved by backfill from records | CASE-002, 011, 014, 017 |
+| Seeded omissions | CASE-002, 003, 004, 011, 012, 013, 014, 017, 019, 020, 021 |
+| — resolved by backfill from records | CASE-002, 011, 014, 017, 021 |
 | — resolved by a later correction from the requester | CASE-004 |
 | — not resolvable; must raise a completion task | CASE-003, 012, 013, 019 |
 | — not resolvable; a new internal reference must be assigned | CASE-020 |
-| Duplicate submissions | CASE-005 (of CASE-001), CASE-018 (of CASE-016) |
-| Near-duplicate guard — must **not** flag | CASE-017 |
+| Duplicate submissions — key match, inside the window | CASE-005 (of CASE-001), CASE-018 (of CASE-016) |
+| Duplicate submissions — identity match, window closed, prior case closed | CASE-021 (of CASE-014) |
+| Near-duplicate guard, different key — must **not** flag | CASE-017 |
+| Near-duplicate guard, same key + different content — must **not** flag | CASE-022 |
 | Contradictory fields | CASE-013 |
 | Misroute traps | CASE-006, CASE-020 |
-| `Not applicable` false-positive traps | CASE-012, CASE-014, CASE-020 |
-| Critical-condition escalation trigger | CASE-008 (matches **CCS-001** and **CCS-002** in `CCR-DEMO-v1`) |
+| `Not applicable` false-positive traps | CASE-012, CASE-014, CASE-020, CASE-021 |
+| Critical-condition escalation trigger | CASE-008 (matches **CCS-001** and **CCS-002** → **one** packet), CASE-023 (matches **CCS-003**) |
 | Clinical clearance gate | CASE-009 |
 | Financial clearance gate | CASE-010 |
 | Provisional routing then correction | CASE-004 |
 | Parallel approval fan-out | CASE-007 |
-| SLA-bound urgency | CASE-008, CASE-020 |
+| SLA-bound urgency | CASE-008, CASE-020, CASE-023 |
 
 ### 6.1 Deliberate Traps
 
@@ -92,19 +106,24 @@ These exist to catch over-eager behaviour, not just under-detection:
 - **CASE-017** shares a requester with CASE-016 and CASE-018 but has a different patient and a different service. Flagging it as a duplicate is a false positive.
 - **CASE-012, 014, 020** carry `payer_plan: "Not applicable"`. Reporting these as missing is a false positive.
 - **CASE-013** must be neither silently accepted as STAT nor silently downgraded. The conflict is surfaced; a human resolves it.
-- **CASE-008** must produce an escalation packet and nothing more. Any clinical interpretation of the critical flag is a Sev 0 failure under [`docs/constitution.md`](../docs/constitution.md) §5.
+- **CASE-008** must produce an escalation packet and nothing more. Any clinical interpretation of the critical flag is a Sev 0 failure under [`docs/constitution.md`](../docs/constitution.md) §5. It matches **two** register entries and must produce **one** packet naming both, not one packet per match.
+- **CASE-021** is an exact re-fax of CASE-014 arriving 39 days later against a closed case. It is the only fixture that reaches the identity matcher without the key matcher also being able to fire, so without it the identity matcher could be dead code and the graded set would not notice. (The key *window* itself is covered separately by unit test, not by this fixture.)
+- **CASE-022** shares sender, patient *and* service with CASE-016 but is genuinely different work under a new order reference. Flagging it means the content normaliser is erasing real differences, which FR-055 forbids outright.
+- **CASE-023** carries a laboratory critical-value marker. The marker is the signal; the numeric result behind it must **never** be read, compared or repeated — doing so is a clinical act and a **Sev 0** failure.
 
-### 6.2 Known Coverage Gaps
+### 6.2 Coverage — closed under `SYN-CASESET-v2`
 
-`SYN-CASESET-v1` does not exercise everything the specification requires graded. These gaps are recorded rather than left to be discovered, and each blocks a specific harness pass until a successor dataset closes it.
+`SYN-CASESET-v1` left three gaps that kept two criteria **Blocked**. All three are now closed, and the harness grades both criteria rather than deferring them.
 
-| Gap | What is missing | Blocks | Closing it |
-|---|---|---|---|
-| **SC-009 identity matcher** | An exact re-send arriving **after** the 72-hour key window has closed, against an already-closed case. Both existing duplicates (CASE-005 at ~6h, CASE-018 at ~20h) fall inside the window, so both are *key* matches — the unbounded document-identity matcher (FR-055) is never exercised on its own, and a key-match-only implementation would pass by accident. | Pass 2 | New fixture case |
-| **SC-009 identity false positive** | A later submission sharing the sender/patient/service key but carrying **genuinely different content**, which must **not** be identity-flagged. CASE-017 is a *different-key* guard, not this one, so an over-broad content normaliser would go undetected. | Pass 2 | New fixture case |
-| **CCS-003** | No case carries a laboratory critical-value or panic-value marker, so the third register entry in `CCR-DEMO-v1` is registered but never fires. Its negative direction is covered; its positive direction is not. | Pass 3 evidence must name CCS-003 as uncovered | New fixture case |
+| Was missing | Closed by | Now graded as |
+|---|---|---|
+| An exact re-send arriving **after** the 72-hour key window, against a closed case | **CASE-021** | `sc009_duplicate_matcher_correctness` — grades *which matcher fired*, not merely that a flag was raised |
+| A same-key, **different-content** submission that must **not** be identity-flagged | **CASE-022** | same metric, negative direction |
+| A laboratory critical-value marker to exercise **CCS-003** | **CASE-023** | `register_entry_coverage` — every register entry must fire on at least one fixture |
 
-Adding any of these mints a new dataset ID under §7. Until then, the affected checks are recorded as **Blocked**, never as passed — a Blocked run is not a Pass (harness §4).
+**The SC-009 metric grades the matcher, not the flag.** A key-match-only implementation would score full marks on flag correctness alone while never exercising the identity matcher at all. That is precisely the failure CASE-021 exists to expose, so the metric asserts the expected `duplicate_matcher_expected` value per case.
+
+**No criterion is currently Blocked.** Should a future dataset revision remove a fixture, the harness will re-report the affected criterion as Blocked automatically — the check is computed from register and subset coverage, not hardcoded.
 
 ## 7. Change Control
 

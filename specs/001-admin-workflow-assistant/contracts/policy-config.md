@@ -285,9 +285,9 @@ excluded_explicitly:                  # recorded so the boundary is visible, reg
 
 ```json
 {
-  "bundle_id": "POLICY-v1",
+  "bundle_id": "POLICY-v2",
   "frozen_at": "<iso-8601>",
-  "dataset_id": "SYN-CASESET-v1",
+  "dataset_id": "SYN-CASESET-v2",
   "register_version": "CCR-DEMO-v1",
   "files": {
     "policy-table.yaml": "sha256:...",

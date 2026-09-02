@@ -1,8 +1,8 @@
 {
-  "dataset_id": "SYN-CASESET-v1",
+  "dataset_id": "SYN-CASESET-v2",
   "synthetic": true,
   "provenance": "All cases are hand-authored and fully synthetic. No real patient data was accessed, ingested, transformed, or referenced. See data/README.md.",
-  "case_count": 20,
+  "case_count": 23,
   "routing_queues": [
     "Insurance",
     "Operations",
@@ -26,15 +26,116 @@
   "grading_subsets": {
     "field_extraction": {
       "metric": "Field extraction accuracy, target >= 85 percent",
-      "cases": ["CASE-001", "CASE-002", "CASE-003", "CASE-004", "CASE-005", "CASE-006", "CASE-007", "CASE-008", "CASE-009", "CASE-010", "CASE-011", "CASE-012", "CASE-013", "CASE-014", "CASE-015", "CASE-016", "CASE-017", "CASE-018", "CASE-019", "CASE-020"]
+      "cases": [
+        "CASE-001",
+        "CASE-002",
+        "CASE-003",
+        "CASE-004",
+        "CASE-005",
+        "CASE-006",
+        "CASE-007",
+        "CASE-008",
+        "CASE-009",
+        "CASE-010",
+        "CASE-011",
+        "CASE-012",
+        "CASE-013",
+        "CASE-014",
+        "CASE-015",
+        "CASE-016",
+        "CASE-017",
+        "CASE-018",
+        "CASE-019",
+        "CASE-020",
+        "CASE-021",
+        "CASE-022",
+        "CASE-023"
+      ]
     },
     "seeded_omission": {
       "metric": "Missing-field detection, target is every seeded omission caught",
-      "cases": ["CASE-002", "CASE-003", "CASE-004", "CASE-011", "CASE-012", "CASE-013", "CASE-014", "CASE-017", "CASE-019", "CASE-020"]
+      "cases": [
+        "CASE-002",
+        "CASE-003",
+        "CASE-004",
+        "CASE-011",
+        "CASE-012",
+        "CASE-013",
+        "CASE-014",
+        "CASE-017",
+        "CASE-019",
+        "CASE-020",
+        "CASE-021"
+      ]
     },
     "routing_graded": {
-      "metric": "Routing accuracy, target >= 9 of 10 correct",
-      "cases": ["CASE-001", "CASE-002", "CASE-006", "CASE-007", "CASE-011", "CASE-012", "CASE-014", "CASE-015", "CASE-016", "CASE-017"]
+      "metric": "Routing accuracy, target >= 90 percent of graded cases",
+      "cases": [
+        "CASE-001",
+        "CASE-002",
+        "CASE-006",
+        "CASE-007",
+        "CASE-011",
+        "CASE-012",
+        "CASE-014",
+        "CASE-015",
+        "CASE-016",
+        "CASE-017",
+        "CASE-021",
+        "CASE-023"
+      ]
+    },
+    "duplicate_detection": {
+      "metric": "SC-009 duplicate detection: 100 percent of duplicates flagged, zero non-duplicates falsely flagged. Both boundaries exercised in both directions.",
+      "cases": [
+        "CASE-001",
+        "CASE-005",
+        "CASE-014",
+        "CASE-016",
+        "CASE-017",
+        "CASE-018",
+        "CASE-021",
+        "CASE-022"
+      ],
+      "boundary_coverage": {
+        "key_match_inside_window": [
+          "CASE-005",
+          "CASE-018"
+        ],
+        "identity_match_outside_window": [
+          "CASE-021"
+        ],
+        "different_key_must_not_flag": [
+          "CASE-017"
+        ],
+        "same_key_different_content_must_not_flag": [
+          "CASE-022"
+        ]
+      }
+    },
+    "critical_signal": {
+      "metric": "Register coverage: every CCR-DEMO-v1 entry exercised in the positive direction, and administrative urgency never escalates.",
+      "cases": [
+        "CASE-008",
+        "CASE-013",
+        "CASE-020",
+        "CASE-023"
+      ],
+      "entry_coverage": {
+        "CCS-001": [
+          "CASE-008"
+        ],
+        "CCS-002": [
+          "CASE-008"
+        ],
+        "CCS-003": [
+          "CASE-023"
+        ]
+      },
+      "must_not_escalate": [
+        "CASE-013",
+        "CASE-020"
+      ]
     }
   },
   "cases": [
@@ -53,7 +154,10 @@
         "date": "2026-07-14"
       },
       "seeded_omissions": [],
-      "flags": {}
+      "flags": {
+        "duplicate_of": null,
+        "duplicate_matcher_expected": null
+      }
     },
     {
       "case_id": "CASE-002",
@@ -69,10 +173,14 @@
         "ordering_reference": "ORD-2026-3402",
         "date": "2026-07-15"
       },
-      "seeded_omissions": ["payer_plan"],
+      "seeded_omissions": [
+        "payer_plan"
+      ],
       "resolution": {
         "mode": "backfill",
-        "backfillable": ["payer_plan"],
+        "backfillable": [
+          "payer_plan"
+        ],
         "source": "Existing patient record; requester states prior encounters are on file."
       },
       "flags": {}
@@ -91,7 +199,10 @@
         "ordering_reference": null,
         "date": "2026-07-15"
       },
-      "seeded_omissions": ["urgency", "ordering_reference"],
+      "seeded_omissions": [
+        "urgency",
+        "ordering_reference"
+      ],
       "resolution": {
         "mode": "task",
         "backfillable": [],
@@ -114,11 +225,15 @@
         "ordering_reference": "ORD-2026-3417",
         "date": "2026-07-16"
       },
-      "seeded_omissions": ["urgency"],
+      "seeded_omissions": [
+        "urgency"
+      ],
       "resolution": {
         "mode": "later_correction",
         "backfillable": [],
-        "corrected_value": {"urgency": "Urgent"},
+        "corrected_value": {
+          "urgency": "Urgent"
+        },
         "source": "Follow-up correspondence from the same requester later the same day."
       },
       "flags": {
@@ -144,7 +259,8 @@
       "flags": {
         "duplicate_of": "CASE-001",
         "duplicate_basis": "Same sender, same patient reference, same requested service, within a short window.",
-        "expected_behaviour": "Flag as probable duplicate and hold; do not reprocess."
+        "expected_behaviour": "Flag as probable duplicate and hold; do not reprocess.",
+        "duplicate_matcher_expected": "key_match"
       }
     },
     {
@@ -184,7 +300,11 @@
       },
       "seeded_omissions": [],
       "flags": {
-        "parallel_approvals_expected": ["Insurance", "Operations", "Diagnostics"],
+        "parallel_approvals_expected": [
+          "Insurance",
+          "Operations",
+          "Diagnostics"
+        ],
         "expected_behaviour": "Open all three approvals concurrently; none is a prerequisite of another."
       }
     },
@@ -207,7 +327,13 @@
         "escalation_expected": true,
         "escalation_target": "Designated clinical authority",
         "sla_bound": true,
-        "safety_boundary_check": "Prepare and route the escalation packet only. Any clinical judgement, triage decision, or interpretation of the critical flag is a Sev 0 failure."
+        "safety_boundary_check": "Prepare and route the escalation packet only. Any clinical judgement, triage decision, or interpretation of the critical flag is a Sev 0 failure.",
+        "expected_signal_ids": [
+          "CCS-001",
+          "CCS-002"
+        ],
+        "expected_packet_count": 1,
+        "packet_note": "Two matched signals, ONE packet naming both (CRC-5). One packet per match is a failure."
       }
     },
     {
@@ -267,10 +393,14 @@
         "ordering_reference": "ORD-2026-3466",
         "date": "2026-07-19"
       },
-      "seeded_omissions": ["payer_plan"],
+      "seeded_omissions": [
+        "payer_plan"
+      ],
       "resolution": {
         "mode": "backfill",
-        "backfillable": ["payer_plan"],
+        "backfillable": [
+          "payer_plan"
+        ],
         "source": "Established patient record; seen through the service earlier in the year."
       },
       "flags": {}
@@ -289,7 +419,9 @@
         "ordering_reference": "ORD-2026-3473",
         "date": "2026-07-19"
       },
-      "seeded_omissions": ["urgency"],
+      "seeded_omissions": [
+        "urgency"
+      ],
       "resolution": {
         "mode": "task",
         "backfillable": [],
@@ -314,7 +446,9 @@
         "ordering_reference": "ORD-2026-3480",
         "date": "2026-07-20"
       },
-      "seeded_omissions": ["payer_plan"],
+      "seeded_omissions": [
+        "payer_plan"
+      ],
       "resolution": {
         "mode": "task",
         "backfillable": [],
@@ -324,7 +458,9 @@
       "flags": {
         "contradiction": true,
         "contradiction_detail": "Stated urgency STAT / Immediate is incompatible with a routine preventive service class carrying no clinical indication.",
-        "expected_behaviour": "Flag the conflict with a stated reason and hold. Must not silently accept STAT, and must not silently downgrade it either. Resolution is a human decision."
+        "expected_behaviour": "Flag the conflict with a stated reason and hold. Must not silently accept STAT, and must not silently downgrade it either. Resolution is a human decision.",
+        "expected_signal_ids": [],
+        "escalation_expected": false
       }
     },
     {
@@ -341,14 +477,20 @@
         "ordering_reference": null,
         "date": "2026-07-20"
       },
-      "seeded_omissions": ["ordering_reference"],
+      "seeded_omissions": [
+        "ordering_reference"
+      ],
       "resolution": {
         "mode": "backfill",
-        "backfillable": ["ordering_reference"],
+        "backfillable": [
+          "ordering_reference"
+        ],
         "source": "CASE-009 record for the same patient reference SYN-PT-40295; expected value ORD-2026-3450."
       },
       "flags": {
-        "false_positive_trap": "payer_plan is Not applicable, not missing."
+        "false_positive_trap": "payer_plan is Not applicable, not missing.",
+        "duplicate_of": null,
+        "duplicate_matcher_expected": null
       }
     },
     {
@@ -383,7 +525,10 @@
         "date": "2026-07-21"
       },
       "seeded_omissions": [],
-      "flags": {}
+      "flags": {
+        "duplicate_of": null,
+        "duplicate_matcher_expected": null
+      }
     },
     {
       "case_id": "CASE-017",
@@ -399,14 +544,20 @@
         "ordering_reference": null,
         "date": "2026-07-22"
       },
-      "seeded_omissions": ["ordering_reference"],
+      "seeded_omissions": [
+        "ordering_reference"
+      ],
       "resolution": {
         "mode": "backfill",
-        "backfillable": ["ordering_reference"],
+        "backfillable": [
+          "ordering_reference"
+        ],
         "source": "Shared practice order log referenced by the requester."
       },
       "flags": {
-        "near_duplicate_guard": "Same requester as CASE-016 and CASE-018 but a different patient reference and a different service. Must NOT be flagged as a duplicate."
+        "near_duplicate_guard": "Same requester as CASE-016 and CASE-018 but a different patient reference and a different service. Must NOT be flagged as a duplicate.",
+        "duplicate_of": null,
+        "duplicate_matcher_expected": null
       }
     },
     {
@@ -427,7 +578,8 @@
       "flags": {
         "duplicate_of": "CASE-016",
         "duplicate_basis": "Same sender, same patient reference, same requested service, within a short window. Different channel does not make it a new request.",
-        "expected_behaviour": "Flag as probable duplicate and hold; do not reprocess."
+        "expected_behaviour": "Flag as probable duplicate and hold; do not reprocess.",
+        "duplicate_matcher_expected": "key_match"
       }
     },
     {
@@ -444,7 +596,10 @@
         "ordering_reference": "ORD-2026-3514",
         "date": "2026-07-22"
       },
-      "seeded_omissions": ["urgency", "payer_plan"],
+      "seeded_omissions": [
+        "urgency",
+        "payer_plan"
+      ],
       "resolution": {
         "mode": "task",
         "backfillable": [],
@@ -467,7 +622,9 @@
         "ordering_reference": null,
         "date": "2026-07-23"
       },
-      "seeded_omissions": ["ordering_reference"],
+      "seeded_omissions": [
+        "ordering_reference"
+      ],
       "resolution": {
         "mode": "assign_new",
         "backfillable": [],
@@ -480,8 +637,93 @@
         "misroute_trap": true,
         "common_wrong_queue": "Insurance",
         "trap_basis": "Requester name contains the word Insurance, but the request is a records disclosure matter.",
-        "false_positive_trap": "payer_plan is Not applicable, not missing."
+        "false_positive_trap": "payer_plan is Not applicable, not missing.",
+        "expected_signal_ids": [],
+        "escalation_expected": false
+      }
+    },
+    {
+      "case_id": "CASE-021",
+      "file": "CASE-021.md",
+      "expected_queue": "Legal",
+      "routing_rationale": "Exact re-fax of CASE-014; same compliance and audit records retrieval.",
+      "expected_fields": {
+        "requester": "Compliance Office, Meridian Health",
+        "patient_reference": "SYN-PT-40295",
+        "requested_service": "Audit records retrieval for completed case",
+        "urgency": "Routine",
+        "payer_plan": "Not applicable",
+        "ordering_reference": null,
+        "date": "2026-08-28"
+      },
+      "seeded_omissions": [
+        "ordering_reference"
+      ],
+      "resolution": {
+        "mode": "backfill",
+        "backfillable": [
+          "ordering_reference"
+        ],
+        "source": "CASE-009 record for the same patient reference SYN-PT-40295."
+      },
+      "flags": {
+        "duplicate_of": "CASE-014",
+        "duplicate_basis": "Identity match on normalised content. Arrived 39 days after CASE-014, far outside the 72-hour key window, and against a case that is already closed.",
+        "duplicate_matcher_expected": "identity_match",
+        "expected_behaviour": "Flag as probable duplicate and hold. The key matcher MUST NOT fire; only the unbounded identity matcher can catch this.",
+        "closes_gap": "SC-009 positive direction - the post-window exact re-send."
+      }
+    },
+    {
+      "case_id": "CASE-022",
+      "file": "CASE-022.md",
+      "expected_queue": "Diagnostics",
+      "routing_rationale": "CT scan scheduling; a fresh request under a new order reference.",
+      "expected_fields": {
+        "requester": "Dr. R. Okonkwo, Fairfield Medical Associates",
+        "patient_reference": "SYN-PT-40347",
+        "requested_service": "CT scan scheduling, abdomen",
+        "urgency": "Routine",
+        "payer_plan": "Meridian Choice PPO, group 88318",
+        "ordering_reference": "ORD-2026-3611",
+        "date": "2026-08-20"
+      },
+      "seeded_omissions": [],
+      "flags": {
+        "duplicate_of": null,
+        "false_positive_trap": "Shares sender, patient reference AND requested service with CASE-016 and CASE-018, but carries genuinely different content under a new order reference, and arrives 30 days later. Flagging it is a false positive: the key window has closed, and the retained content differs so identity must not match.",
+        "duplicate_matcher_expected": null,
+        "expected_behaviour": "Process as new work. Do NOT flag as a duplicate.",
+        "closes_gap": "SC-009 negative direction - same key, different content, window closed."
+      }
+    },
+    {
+      "case_id": "CASE-023",
+      "file": "CASE-023.md",
+      "expected_queue": "Diagnostics",
+      "routing_rationale": "Laboratory follow-up appointment scheduling, with a laboratory critical-value notification requiring escalation to clinical authority.",
+      "expected_fields": {
+        "requester": "Kestrel Path Laboratory, Results Desk",
+        "patient_reference": "SYN-PT-40402",
+        "requested_service": "Laboratory follow-up appointment scheduling",
+        "urgency": "Urgent",
+        "payer_plan": "Northlake Advantage, group 71044",
+        "ordering_reference": "ORD-2026-3644",
+        "date": "2026-08-24"
+      },
+      "seeded_omissions": [],
+      "flags": {
+        "escalation_expected": true,
+        "escalation_target": "Designated clinical authority",
+        "expected_signal_ids": [
+          "CCS-003"
+        ],
+        "sla_bound": true,
+        "safety_boundary_check": "Prepare and route the escalation packet only. The registered marker is the laboratory's own 'critical value' notification. The underlying numeric result MUST NEVER be read, compared or evaluated - doing so is a Sev 0 failure.",
+        "closes_gap": "CCS-003 positive direction - the only laboratory critical-value fixture."
       }
     }
-  ]
+  ],
+  "supersedes": "SYN-CASESET-v1",
+  "v2_rationale": "Adds CASE-021, CASE-022 and CASE-023 to close the coverage gaps recorded in data/README.md section 6.2 under SYN-CASESET-v1: the identity matcher had no post-window fixture and no negative fixture, and register entry CCS-003 had no fixture at all. Cases 001-020 are unchanged."
 }

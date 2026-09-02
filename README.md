@@ -21,22 +21,22 @@ Document arrives → agent extracts fields, flags gaps, picks the queue, drafts 
 
 | | |
 |---|---|
-| **Build** | `src/admin_workflow/` — 25 modules |
-| **Tests** | **154 passing** across contract, unit, scenario and harness tiers |
-| **Harness verdict** | **CONDITIONAL GO** — all three hard gates pass ([run record](./docs/multipass-run-chg-023.md)) |
-| **Policy bundle** | `POLICY-v1`, frozen and SHA-256 verified at load |
+| **Build** | `src/admin_workflow/` — 23 modules |
+| **Tests** | **166 passing** — 25 contract, 53 unit, 49 scenario, 39 harness |
+| **Harness verdict** | **GO** — all hard gates pass, **zero Blocked criteria** ([run record](./docs/multipass-run-chg-024.md)) |
+| **Policy bundle** | `POLICY-v2`, frozen and SHA-256 verified at load |
+| **Dataset** | `SYN-CASESET-v2`, 23 synthetic cases |
 
 | Metric | Result | Target |
 |---|---|---|
-| Field extraction accuracy | **139/140 = 99.29%** | ≥ 85% |
-| Seeded omission detection | **12/12 = 100%** | 100% |
-| Routing accuracy | **10/10** | ≥ 9/10 |
-| First-pass completeness | **20/20 = 100%** | ≥ 90% |
-| Escalation outcome correctness | **20/20 = 100%** | 100% |
-| Unapproved sends | **0** | 0 |
-| False escalations | **0** | 0 |
-
-Two criteria are recorded **Blocked, not passed** — SC-009 and CCS-003 lack fixtures in `SYN-CASESET-v1`. A Blocked criterion is not a Pass, so they are named rather than counted. See the run record §5.
+| Field extraction accuracy | **160/161 = 99.38%** | ≥ 85% |
+| Seeded omission detection | **13/13 = 100%** | 100% |
+| Routing accuracy | **12/12 = 100%** | ≥ 90% |
+| First-pass completeness | **23/23 = 100%** | ≥ 90% |
+| Escalation outcome correctness | **23/23 = 100%** | 100% |
+| SC-009 duplicate matcher correctness | **8/8 = 100%** | 100% |
+| Register entry coverage | **3/3 = 100%** | 100% |
+| Unapproved sends / false escalations | **0 / 0** | 0 |
 
 ## Run it
 
@@ -44,8 +44,8 @@ Two criteria are recorded **Blocked, not passed** — SC-009 and CCS-003 lack fi
 pip install pyyaml pytest
 
 python src/admin_workflow/surface/cli.py verify   # check bundle integrity
-python src/admin_workflow/surface/cli.py eval     # score against the 20-case dataset
-python -m pytest -q                               # 154 tests
+python src/admin_workflow/surface/cli.py eval     # score against the 23-case dataset
+python -m pytest -q                               # 166 tests
 ```
 
 ## The one design decision that matters
@@ -54,18 +54,27 @@ python -m pytest -q                               # 154 tests
 
 That single boundary is what lets three properties hold at once instead of trading against each other: run-to-run determinism (P7), routing decisions a non-technical reviewer can inspect (FR-017), and the constitution's prohibition on clinical inference (§5).
 
+## How we know the tests mean something
+
+Two metrics were strengthened before they were allowed to pass:
+
+- **SC-009 grades which duplicate matcher fired**, not merely that a duplicate was found. A key-match-only implementation would have scored 100% on the flag alone while the unbounded identity matcher sat as dead code. `CASE-021` arrives 39 days out against a closed case, so only the identity matcher can catch it.
+- **Register coverage is computed from the register**, not from a maintained list. Every entry must fire on a fixture; one that fires on none is reported Blocked automatically. Previously this section *read* as full coverage while a safety-bearing entry had never been exercised.
+
+A claim that cannot fail is not evidence. Both were unfalsifiable; both are now falsifiable.
+
 ## Start here
 
 | File | What it is |
 |---|---|
 | [`feature.md`](./feature.md) | The feature request — scope, F1-F24, thresholds P1-P11, decisions. **Read this first.** |
 | [`specs/001-admin-workflow-assistant/spec.md`](./specs/001-admin-workflow-assistant/spec.md) | The formal specification — 57 requirements, 15 success criteria, full scenario traceability |
-| [`docs/multipass-run-chg-023.md`](./docs/multipass-run-chg-023.md) | **The validation run record** — scores, evidence, blocked criteria, production gaps |
+| [`docs/multipass-run-chg-024.md`](./docs/multipass-run-chg-024.md) | **The validation run record** — scores, evidence, and the production gaps that remain |
 | [`docs/constitution.md`](./docs/constitution.md) | Non-negotiable constraints. Immutable by default. |
 | [`docs/critical-condition-register.md`](./docs/critical-condition-register.md) | `CCR-DEMO-v1` — the exclusive set of signals that may be treated as critical. No inference beyond it. |
 | [`config/policy/v1/`](./config/policy/v1/) | The declarative policy bundle — every scored number and every routing rule, in reviewer-readable YAML |
 | [`docs/multipass-validation-harness.md`](./docs/multipass-validation-harness.md) | The readiness gate. No claim ships without a passing run. |
-| [`data/README.md`](./data/README.md) | Synthetic dataset — 20 sample cases, the grading answer key, and the known coverage gaps |
+| [`data/README.md`](./data/README.md) | Synthetic dataset — 23 cases, the grading answer key, and what each trap catches |
 
 Operational records live in [`docs/`](./docs/): the change system-of-record is [`progress-log.md`](./docs/progress-log.md).
 
@@ -89,7 +98,7 @@ Operational records live in [`docs/`](./docs/): the change system-of-record is [
 │   ├── contract/ · unit/ · scenario/ · harness/
 ├── specs/001-admin-workflow-assistant/   # spec, plan, research, data model, contracts, 180 tasks
 ├── docs/                                 # constitution, register, harness, run records, progress log
-└── data/sample/                          # 20 synthetic cases + answer key (NO real PHI)
+└── data/sample/                          # 23 synthetic cases + answer key (NO real PHI)
 ```
 
 ## Ground rules

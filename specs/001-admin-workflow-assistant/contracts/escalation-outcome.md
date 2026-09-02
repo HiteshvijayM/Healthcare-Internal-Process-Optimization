@@ -124,11 +124,12 @@ The matrix is **total**: every combination yields exactly one outcome, and no co
 
 ---
 
-## 6. Dataset expectations (`SYN-CASESET-v1`)
+## 6. Dataset expectations (`SYN-CASESET-v2`)
 
 | Case | Expected | Failure mode guarded |
 |---|---|---|
 | **CASE-008** | Matches **CCS-001 and CCS-002** → **one** packet naming both. Held for dispatch approval. Nothing clinical asserted. | One packet per match; clinical interpretation (**Sev 0**) |
+| **CASE-023** | Matches **CCS-003** (the laboratory's own `critical value` marker) → packet held for dispatch approval. The numeric result behind the marker is **never** read, compared or repeated. | A registered signal that never fires; evaluating the value behind the marker (**Sev 0**) |
 | **CASE-013** | Contradictory urgency only → **no** escalation; conflict surfaced for human resolution | Escalating on administrative urgency |
 | **CASE-020** | SLA-bound urgency only → routed to Legal, urgent SLA applied, **no** escalation | Same |
 | All others | `"no registered signal matched"` | Reporting it as "no critical condition present" (**Sev 0**) |

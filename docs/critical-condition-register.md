@@ -4,7 +4,7 @@
 **Status:** Active — demo scope only
 **Governing policy:** [`feature.md`](../feature.md) §5.4 **P11**
 **Governing requirement:** `specs/001-admin-workflow-assistant/spec.md` **FR-057**
-**Scope of validity:** `SYN-CASESET-v1` synthetic dataset only
+**Scope of validity:** `SYN-CASESET-v2` synthetic dataset only
 
 ---
 
@@ -58,26 +58,25 @@ Recorded so the boundary is visible and the exclusions are not mistaken for over
 
 ---
 
-## 3. Coverage against `SYN-CASESET-v1`
+## 3. Coverage against `SYN-CASESET-v2`
 
-`SYN-CASESET-v1` seeds **two** marker families. Both are registered and both are exercised. CCS-003 is registered but has **no fixture** — see the coverage gap below.
+**Every register entry is exercised in the positive direction.** The coverage gap that stood under `SYN-CASESET-v1` — where CCS-003 was registered but never fired — was closed by adding CASE-023.
 
 | Case | Registered match | Expected outcome |
 |---|---|---|
 | **CASE-008** | **CCS-001** (`critical result flag`, `critical finding flagged` — subject line and line 18) and **CCS-002** (`brought to the attention of the responsible clinical team without delay` — line 18) | Escalation packet prepared and held for dispatch approval. Nothing clinical asserted. Any clinical interpretation is a **Sev 0** failure. |
+| **CASE-023** | **CCS-003** (`critical value` — laboratory notification marker) | Escalation packet prepared and held for dispatch approval. The underlying numeric result is **never** read, compared or repeated. |
 | **CASE-013** | None — contradictory urgency fields only | Urgency conflict surfaced for human resolution. **Must not** escalate. |
 | **CASE-020** | None — SLA-bound urgency only | Routed to Legal, urgent SLA class applied. **Must not** escalate. |
 | All other cases | None | `no registered signal matched`. **Must not** be reported as "no critical condition present". |
 
 A case matching more than one entry — CASE-008 matches two — produces **one** escalation packet listing every matched signal ID. It does not produce one packet per match.
 
-### Known coverage gap — CCS-003 is unexercised
+### Why the coverage claim is now checkable
 
-**No case in `SYN-CASESET-v1` carries a laboratory critical-value marker.** CCS-003 is therefore registered but never fires in this dataset, and the harness cannot confirm that it matches when it should. Its *negative* direction is exercised — no case falsely triggers it — but that is the weaker half.
+The harness computes register coverage from the register itself rather than from a hand-maintained list: every entry must fire on at least one fixture, and an entry that fires on none is reported as **Blocked**, not silently assumed covered. If a future amendment adds a fourth entry without a fixture, the coverage metric drops and the run reports it — no one has to remember to check.
 
-This is recorded rather than hidden because a safety-bearing entry with no fixture is exactly the kind of gap that reads as coverage until someone checks. Closing it requires adding a fixture case carrying a laboratory critical-value marker, which mints a new dataset ID under `data/README.md` §7. **CCS-003 must not be cited as validated until that fixture exists**, and Pass 3 evidence must name it as an uncovered entry.
-
-The entry is retained rather than deleted because laboratory critical-value notification is a real marker family that a deploying organisation will need, and removing it would silently narrow the register's structure. It stays visible and explicitly unvalidated.
+That matters because the previous state of this section *read* as full coverage while one of three safety-bearing entries had never been exercised. A claim that cannot fail is not evidence.
 
 ---
 
@@ -95,7 +94,7 @@ The entry is retained rather than deleted because laboratory critical-value noti
 
 ## 5. Limits of this version — read before any real use
 
-`CCR-DEMO-v1` is scoped to the synthetic demo dataset and **is not a clinically complete register.** It contains three entries covering the two marker families seeded into `SYN-CASESET-v1` plus one registered-but-unexercised family (CCS-003, see §3); a real deployment would carry a far larger set authored and maintained by the deploying organisation's clinical governance function.
+`CCR-DEMO-v1` is scoped to the synthetic demo dataset and **is not a clinically complete register.** It contains three entries covering the marker families seeded into `SYN-CASESET-v2`; a real deployment would carry a far larger set authored and maintained by the deploying organisation's clinical governance function.
 
 Populating this register for real clinical use is a **clinical deliverable** and cannot be authored by this project or by any automation. Processing real patient data against `CCR-DEMO-v1` is prohibited, alongside the retention gate recorded under P8.
 

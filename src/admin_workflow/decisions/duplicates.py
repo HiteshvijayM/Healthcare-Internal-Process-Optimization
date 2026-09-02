@@ -27,7 +27,13 @@ from ..policy.bundle import PolicyBundle
 #: Transport-added material only. A broader normaliser would erase genuine
 #: content differences and turn FR-055's "a difference in any retained content
 #: MUST prevent one" into a false-positive generator.
+#:
+#: The intake-assigned case heading is stripped for the same reason an arrival
+#: timestamp is: both are added by the *receiving* system on arrival and are not
+#: part of what the sender transmitted. Retaining it would make every re-send
+#: trivially distinct from its original and defeat identity matching entirely.
 _TRANSPORT_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"^\s*#\s*CASE-\d+\s*$", re.M | re.I),
     re.compile(r"^\s*\*\*Received(\s+via)?:\*\*.*$", re.M | re.I),
     re.compile(r"^\s*\*\*Received:\*\*.*$", re.M | re.I),
     re.compile(r"^\s*-{3,}\s*$", re.M),

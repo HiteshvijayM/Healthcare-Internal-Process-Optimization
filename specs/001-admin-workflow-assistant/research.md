@@ -229,7 +229,7 @@ Each decision records **Decision / Rationale / Alternatives considered / Traces 
 | 11 | Testing framework and structure | pytest; contract / scenario (AS-*) / unit / harness tiers | D19 |
 | 12 | Target platform | Local/dev container; single demo tenant; no production hosting (out of scope) | D1, P9 |
 | 13 | Performance goal | Draft ready < 30s at p95, nearest-rank, over all admitted cases | D18, SC-003 |
-| 14 | Scale | 20-case `SYN-CASESET-v1`; one tenant; one reviewer session | P9, §13.2 |
+| 14 | Scale | 23-case `SYN-CASESET-v2`; one tenant; one reviewer session | P9, §13.2 |
 
 **No `NEEDS CLARIFICATION` markers remain.**
 

@@ -266,7 +266,7 @@ One type with a discriminator, so precedence is expressible in one place.
 | `bundle_id` | string, e.g. `POLICY-v1` | Frozen for a run (harness §4). |
 | `file_hashes` | map filename → SHA-256 | Includes the SHA-256 of `docs/critical-condition-register.md` (research D8). |
 | `register_version` | string | `CCR-DEMO-v1` (P11). |
-| `dataset_id` | string | `SYN-CASESET-v1`. |
+| `dataset_id` | string | `SYN-CASESET-v2`. Read from the answer key at freeze time, never hardcoded, so the bundle and the dataset cannot drift apart. |
 
 **Invariant** — `INV-P1`: immutable once loaded; a change mints a new `bundle_id` and re-runs any dependent harness pass.
 

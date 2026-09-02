@@ -24,6 +24,7 @@ P2_duplicate_detection:
     scope: all_cases                      # including closed cases
     matches_on: [source_document_id, normalized_content_hash]
     normalization_strips:                 # transport-added material ONLY
+      - intake_assigned_case_headings     # added by the receiver, like an arrival timestamp
       - cover_sheets
       - routing_headers
       - arrival_timestamps

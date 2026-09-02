@@ -33,7 +33,7 @@ The technical approach rests on four load-bearing choices, each of which convert
 **Performance Goals**: Draft ready in **< 30 s at p95** (nearest-rank, over every case admitted to the run, outliers itemised with cause) — SC-003. Escalation packet prepared within **30 s** of detection — FR-024
 **Constraints**:
 - **Determinism is non-negotiable** — 100% identical per-case classifications across runs, aggregates within ±2 pp (P7, FR-049, SC-013)
-- **Synthetic data only** — `SYN-CASESET-v1`; no real patient data ingested, stored, logged or exported at any point (constitution §3, FR-046)
+- **Synthetic data only** — `SYN-CASESET-v2`; no real patient data ingested, stored, logged or exported at any point (constitution §3, FR-046)
 - **Zero unapproved outbound actions** (FR-030, SC-008); the agent holds **no** approver role and **no** designation (FR-038, harness §4.1/§4.2)
 - **No inference on critical conditions** — literal matching against `CCR-DEMO-v1` only; a missing register blocks rather than reports a clean result (FR-057, P11)
 - **Routing rules declarative and reviewer-readable**, in config rather than code (`feature.md` §9, §13.5)

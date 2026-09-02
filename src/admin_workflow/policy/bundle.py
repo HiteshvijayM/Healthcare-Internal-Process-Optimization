@@ -208,16 +208,24 @@ def load_bundle(root: Path | str, repo_root: Path | str | None = None) -> Policy
 
 
 def freeze_bundle(root: Path | str, repo_root: Path | str, bundle_id: str, frozen_at: str) -> dict[str, Any]:
-    """Write bundle.lock.json — CA-008-003, 'freeze the policy version for the run'."""
+    """Write bundle.lock.json — CA-008-003, 'freeze the policy version for the run'.
+
+    The dataset ID is read from the answer key rather than hardcoded, so the
+    bundle and the dataset cannot silently drift apart. BC-3: any content change
+    mints a new bundle_id and requires re-running every dependent harness pass.
+    """
     root, repo_root = Path(root), Path(repo_root)
     files = {name: sha256_of(root / name) for name in BUNDLE_FILES}
     for name in EXTERNAL_FILES:
         files[name] = sha256_of(repo_root / name)
     register = _load_yaml(root / "critical-signal-register.yaml")
+    answer_key = json.loads(
+        (repo_root / "data" / "sample" / "answer-key.json").read_text(encoding="utf-8")
+    )
     lock = {
         "bundle_id": bundle_id,
         "frozen_at": frozen_at,
-        "dataset_id": "SYN-CASESET-v1",
+        "dataset_id": answer_key["dataset_id"],
         "register_version": register["register_id"],
         "files": files,
     }

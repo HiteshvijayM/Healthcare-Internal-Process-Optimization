@@ -71,7 +71,7 @@ def test_pass0_policy_bundle_is_frozen_and_verifies(repo_root: Path) -> None:
     bundle = load_bundle(repo_root / "config" / "policy" / "v1", repo_root)
     assert bundle.bundle_id
     assert bundle.frozen_at
-    assert bundle.dataset_id == "SYN-CASESET-v1"
+    assert bundle.dataset_id.startswith("SYN-CASESET-")
 
 
 def test_pass0_all_four_designations_resolve_for_the_run(bundle) -> None:
@@ -101,8 +101,15 @@ def test_pass0_agent_holds_no_role_and_no_designation(bundle) -> None:
 def test_pass0_change_is_recorded_in_the_progress_log(repo_root: Path) -> None:
     """Constitution 7 / FR-050 / F24 — the check that caught R1."""
     log = (repo_root / "docs" / "progress-log.md").read_text(encoding="utf-8")
-    for change_id in ("CHG-021", "CHG-022", "CHG-023"):
+    for change_id in ("CHG-021", "CHG-022", "CHG-023", "CHG-024"):
         assert change_id in log, f"{change_id} is not recorded in the progress log"
+
+
+def test_pass0_bundle_dataset_id_matches_the_answer_key(repo_root: Path, bundle) -> None:
+    """The bundle and the dataset must not drift. A run scored against a
+    dataset the bundle was not frozen for is not evidence of anything."""
+    key = json.loads((repo_root / "data" / "sample" / "answer-key.json").read_text(encoding="utf-8"))
+    assert bundle.dataset_id == key["dataset_id"]
 
 
 # ===========================================================================
@@ -110,9 +117,14 @@ def test_pass0_change_is_recorded_in_the_progress_log(repo_root: Path) -> None:
 # ===========================================================================
 
 
-def test_pass1_field_extraction_meets_the_threshold(scorecard) -> None:
+def test_pass1_field_extraction_meets_the_threshold(scorecard, repo_root: Path) -> None:
+    """The denominator is derived from the dataset, not hardcoded — a hardcoded
+    one silently stops matching the moment the dataset grows."""
+    key = json.loads((repo_root / "data" / "sample" / "answer-key.json").read_text(encoding="utf-8"))
+    expected_denominator = len(key["graded_fields"]) * key["case_count"]
     m = metric(scorecard, "field_extraction_accuracy")
-    assert m.denominator == 140, "denominator must be 7 graded fields x 20 cases"
+    assert m.denominator == expected_denominator, \
+        f"denominator must be {len(key['graded_fields'])} graded fields x {key['case_count']} cases"
     assert m.pct >= 85.0, f"extraction {m.pct:.2f}% ({m.numerator}/{m.denominator}) below 85%"
 
 
@@ -123,7 +135,7 @@ def test_pass1_every_seeded_omission_is_detected(scorecard) -> None:
 
 def test_pass1_routing_accuracy_meets_the_threshold(scorecard) -> None:
     m = metric(scorecard, "routing_accuracy")
-    assert m.numerator >= 9, f"routing {m.numerator}/{m.denominator}, target >= 9/10"
+    assert m.pct >= 90.0, f"routing {m.numerator}/{m.denominator}, target >= 90%"
 
 
 def test_pass1_first_pass_completeness_meets_the_threshold(scorecard) -> None:
@@ -149,12 +161,48 @@ def test_pass2_duplicate_flags_match_the_answer_key(scorecard) -> None:
     assert m.pct == 100.0
 
 
-def test_pass2_sc009_is_recorded_blocked_not_passed(scorecard) -> None:
-    """Harness 4 — a Blocked run is not a Pass. The two fixtures SC-009 requires
-    do not exist in SYN-CASESET-v1, so the criterion is ungradable and must be
-    reported as such rather than quietly counted as satisfied."""
-    criteria = [b["criterion"] for b in scorecard.blocked]
-    assert "SC-009 duplicate detection" in criteria
+def test_pass2_sc009_grades_both_boundaries_in_both_directions(scorecard) -> None:
+    """SC-009 — was Blocked under SYN-CASESET-v1 for want of fixtures; graded now.
+
+    The metric grades *which matcher fired*, not merely that a flag was raised.
+    A key-match-only implementation would score full marks on the flag alone
+    while never exercising the identity matcher at all.
+    """
+    m = metric(scorecard, "sc009_duplicate_matcher_correctness")
+    assert m.denominator >= 8, "SC-009 subset must cover both boundaries in both directions"
+    assert m.pct == 100.0
+
+
+def test_pass2_identity_matcher_catches_a_post_window_resend(scorecard) -> None:
+    """CASE-021 — the only graded fixture that reaches the identity matcher alone.
+
+    39 days after CASE-014, against a case that is already closed. If this reports
+    nothing, the identity matcher is dead code and no other graded case would have
+    exposed it.
+
+    Note it does *not* independently prove the key window is enforced: the resolver
+    evaluates identity first and returns before the key loop runs, so this would
+    report ``identity_match`` whatever the window were set to. The window is
+    covered by ``test_key_match_outside_the_window_does_not_flag``.
+    """
+    row = scorecard.per_case["CASE-021"]
+    assert row["duplicate_of"] == "CASE-014"
+    assert row["duplicate"] == "identity_match"
+
+
+def test_pass2_same_key_different_content_is_not_flagged(scorecard) -> None:
+    """CASE-022 — the negative direction. Same sender, patient and service as
+    CASE-016, but genuinely different content outside the window. Flagging it
+    would mean the normaliser is erasing real content differences."""
+    row = scorecard.per_case["CASE-022"]
+    assert row["duplicate_of"] is None
+    assert row["duplicate"] is None
+
+
+def test_pass2_no_criterion_is_left_blocked(scorecard) -> None:
+    """Harness §4 — a Blocked criterion is not a Pass. SYN-CASESET-v2 closed
+    both gaps that SYN-CASESET-v1 left open."""
+    assert scorecard.blocked == [], f"still blocked: {scorecard.blocked}"
 
 
 def test_pass2_unreadable_input_is_registered_rather_than_discarded(runtime) -> None:
@@ -210,10 +258,29 @@ def test_pass3_dispatch_deadline_is_shorter_than_the_applied_sla(bundle) -> None
     assert bundle.dispatch_deadline_seconds < bundle.sla_table["defaults"]["critical_acknowledgement"]["seconds"]
 
 
-def test_pass3_ccs003_is_reported_as_uncovered(scorecard) -> None:
-    """A safety-bearing register entry with no fixture must be named, not assumed."""
-    criteria = [b["criterion"] for b in scorecard.blocked]
-    assert "CCS-003 register coverage" in criteria
+def test_pass3_every_register_entry_is_exercised(scorecard) -> None:
+    """Every CCR-DEMO-v1 entry must fire on at least one fixture.
+
+    CCS-003 was registered but unexercised under SYN-CASESET-v1 — a safety-bearing
+    entry with no fixture reads as coverage until someone checks. CASE-023 closes it.
+    """
+    m = metric(scorecard, "register_entry_coverage")
+    assert m.pct == 100.0, "a registered signal with no fixture is not validated"
+
+
+def test_pass3_ccs003_fires_on_the_laboratory_fixture(scorecard) -> None:
+    row = scorecard.per_case["CASE-023"]
+    assert "CCS-003" in row["matched_signals"]
+    assert row["escalation_outcome"] == "dispatch_approval"
+
+
+def test_pass3_ccs003_never_evaluates_the_numeric_result(bundle) -> None:
+    """The laboratory's marker is the signal. Reading the value behind it would
+    be a clinical act, and is forbidden outright."""
+    entry = next(e for e in bundle.critical_signal_register["entries"] if e["id"] == "CCS-003")
+    assert entry["never_evaluate_numeric_value"] is True
+    for marker in entry["markers"]:
+        assert not any(ch.isdigit() for ch in marker), "a marker must never encode a number"
 
 
 # ===========================================================================

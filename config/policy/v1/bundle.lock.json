@@ -1,15 +1,15 @@
 {
-  "bundle_id": "POLICY-v1",
-  "frozen_at": "2026-09-02T14:07:35+00:00",
-  "dataset_id": "SYN-CASESET-v1",
+  "bundle_id": "POLICY-v2",
+  "frozen_at": "2026-09-02T14:49:36+00:00",
+  "dataset_id": "SYN-CASESET-v2",
   "register_version": "CCR-DEMO-v1",
   "files": {
-    "policy-table.yaml": "sha256:03afe13954817a400d551dca51d8ca1b1e94e12a5f6d17fd0dee928333035c26",
+    "policy-table.yaml": "sha256:b720849b5903863854351c986656979e7143632c1c0cb5bb6879f10b733c1136",
     "routing-rules.yaml": "sha256:639f2f2fd582090e6e9821dd6b1738f6bac1e0e39d7e5f1804bf4cf875cb3639",
     "approver-registry.yaml": "sha256:6f1b0f2fbf19b1c5d90c76786e04ba69593a176d83b13ac29ee00e9784ea96cd",
     "field-owner-map.yaml": "sha256:2609d03c8e77eecbacd4fb786505d3e7aa10abd83a145efc72db9248169b856d",
     "sla-table.yaml": "sha256:90d5c5ff8776709e6de9578325dd137659fd4c4f05e2598c3690681834254fc5",
-    "critical-signal-register.yaml": "sha256:476bbea100b0dcce28e8067581dc8f72ee1f59051793d8ae069f0646898f918d",
-    "docs/critical-condition-register.md": "sha256:531bb05b979e86f487e2f08f48d1e1ba46fe826f915ad11fa169870036b6b029"
+    "critical-signal-register.yaml": "sha256:44b7173e658f7dfc0547bbf90c990ec4d25fb13547ed66e971eccce390e59ceb",
+    "docs/critical-condition-register.md": "sha256:b2f6edc01e603d9490844976043449b323578472d0bb4c0c00af201d9c7ba3a5"
   }
 }
