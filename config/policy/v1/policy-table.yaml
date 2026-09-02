@@ -1,0 +1,94 @@
+# Policy table — P1..P11
+#
+# Every number the validation harness scores against lives here.
+# Mirrors feature.md 5.4 exactly. Contract rule PC-1: drift fails the build.
+# Contract rule PC-3: no consumer may hardcode any of these values.
+
+policy_table_version: "P-2026-08-06-CHG-021"
+source: "feature.md 5.4"
+
+P1_provisional_routing:
+  min_confidence: 0.80
+  required_fields: [patient_reference, requested_service]
+  forbidden_while: [critical_signal_active, clearance_gate_pending, register_unresolved]
+  safety_bearing: true
+
+P2_duplicate_detection:
+  key_match:
+    window_hours: 72                      # a tunable parameter, never a constant
+    key: [sender, patient_reference, requested_service]
+    scope: in_progress_cases
+    channel_sensitive: false
+  identity_match:
+    window_hours: null                    # unbounded - must never be suppressed by key_match window
+    scope: all_cases                      # including closed cases
+    matches_on: [source_document_id, normalized_content_hash]
+    normalization_strips:                 # transport-added material ONLY
+      - cover_sheets
+      - routing_headers
+      - arrival_timestamps
+      - channel_watermarks
+      - retransmission_banners
+  on_match: flag_and_hold_for_adjudication  # never auto-discard, never auto-merge
+
+P3_escalation_packet_completeness:
+  required_fraction: 1.0
+  mandatory_fields:
+    - case_id
+    - patient_reference
+    - requester
+    - critical_signal_description
+    - source_document_reference
+    - timestamp
+    - designated_clinical_recipient
+  partial_sends_permitted: false
+  safety_bearing: true
+
+P4_approval_slas:
+  defaults:
+    routine: {value: 2, unit: business_days}
+    urgent: {value: 4, unit: hours}
+    critical_acknowledgement: {value: 30, unit: minutes}
+  resolution: [urgency_class, service_line]     # see sla-table.yaml
+  override_rule: shorter_only                   # a longer override needs Compliance Reviewer approval
+  critical_clock_starts_at: detection           # FR-056 - NOT at dispatch
+  requires_on_call_coverage: true               # absent coverage => governance blocker, clock does not start
+  record_applied_value: true                    # FR-022 - breach audited against the value in force
+
+P5_sla_alerts:
+  early_warning_at_pct: 80
+  breach_at_pct: 100
+  auto_advance_on_breach: false
+
+P6_rework_loop_limit:
+  max_loops: 2
+  on_exceed: escalate_to_human_owner
+
+P7_drift_tolerance:
+  aggregate_pp: 2
+  per_case_classification_identical: true
+
+P8_audit_retention:
+  minimum_days: 90
+  scope: project_lifetime
+  purge_before_signoff: false
+
+P9_surface_scope:
+  surfaces: [web_chat]
+  tenants: 1
+  reviewer_sessions: 1
+
+P10_dispatch_approval_deadline:
+  value: 10
+  unit: minutes
+  must_be_strictly_shorter_than: applied_critical_acknowledgement_sla   # FR-052
+  on_breach: [record_breach, keep_undispatched, escalate_to_named_alternate]
+  safety_bearing: true
+
+P11_critical_signal_register:
+  register_id: "CCR-DEMO-v1"
+  authoritative_source: "docs/critical-condition-register.md"
+  inference_permitted: false
+  on_unresolvable: [governance_blocker, hold_case, refuse_provisional_routing]
+  negative_claim_permitted: false        # only "no registered signal matched" may be stated
+  safety_bearing: true

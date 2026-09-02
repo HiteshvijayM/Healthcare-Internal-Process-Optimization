@@ -1,0 +1,36 @@
+# Approver registry — harness 4.1 roles and 4.2 designations
+#
+# Roles are authorities, not persons (AC-2). Acting holders are named per run in
+# the run record, never in this file.
+# `agent` is not a valid value for any role or designation field (AC-1) — the
+# type system makes it unrepresentable, it is not merely rejected.
+
+registry_version: "ROLES-v1"
+source: "docs/multipass-validation-harness.md 4.1 and 4.2"
+
+roles:
+  - {id: intake_coordinator,         authority: administrative, approves: [data_completeness, missing_data_tasking, provisional_routing_acceptance, escalation_dispatch]}
+  - {id: insurance_approver,         authority: role_scoped,    approves: [insurance_stage]}
+  - {id: operations_approver,        authority: role_scoped,    approves: [operations_stage]}
+  - {id: diagnostics_approver,       authority: role_scoped,    approves: [diagnostics_stage]}
+  - {id: legal_approver,             authority: role_scoped,    approves: [legal_stage]}
+  - {id: finance_approver,           authority: role_scoped,    approves: [finance_stage]}
+  - {id: clinical_authority,         authority: clinical,       approves: [clinical_clearance, escalation_receipt], human_only: true}
+  - {id: finance_clearance_approver, authority: financial,      approves: [financial_clearance]}
+  - {id: team_lead,                  authority: governance,     approves: [waivers, constitution_amendments, scope_changes, escalation_dispatch]}
+  - {id: compliance_reviewer,        authority: governance,     approves: [waivers, constitution_amendments, audit_signoff, safety_threshold_loosening]}
+  - {id: team_validation_lead,       authority: validation,     approves: [harness_run_record]}
+
+designations:                                    # 4.2 - assignments, not new authorities
+  designated_clinical_recipient: {held_by: clinical_authority, alternate: clinical_authority}
+  escalation_dispatch_approver:  {held_by: intake_coordinator, alternate: team_lead}
+  dispatch_approval_deadline:    {held_by: policy_value, ref: P10_dispatch_approval_deadline}
+  on_call_clinical_coverage:     {held_by: clinical_authority_roster}
+
+constraints:
+  agent_may_hold_role: false                     # FR-038, harness 4.1
+  agent_may_hold_designation: false              # harness 4.2
+  separation_of_duty:
+    - {not_both: [clinical_authority, finance_clearance_approver], scope: same_case}
+    - {not_both: [escalation_dispatch_approver, designated_clinical_recipient], scope: same_packet}
+  governance_approval_requires_both: [team_lead, compliance_reviewer]

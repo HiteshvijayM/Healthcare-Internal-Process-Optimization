@@ -1,0 +1,25 @@
+# Field-to-role ownership for completion tasks — FR-008
+#
+# FC-1: exactly one accountable owner per task. Unmapped fields resolve to
+# intake_coordinator, never to "unassigned".
+# The mapping is queue-aligned so it introduces no taxonomy beyond the five
+# approved routing queues (feature.md 13.5).
+
+map_version: "OWNERS-v1"
+default_owner: intake_coordinator        # FR-008 - where no mapping exists
+
+mappings:
+  insurance:   insurance_approver
+  operations:  operations_approver
+  diagnostics: diagnostics_approver
+  legal:       legal_approver
+  finance:     finance_approver
+
+field_families:
+  payer_plan:          insurance
+  coverage_reference:  insurance
+  appointment_slot:    operations
+  requested_service:   operations
+  ordering_reference:  diagnostics
+  disclosure_scope:    legal
+  billing_reference:   finance
