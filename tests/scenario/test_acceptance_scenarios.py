@@ -8,16 +8,15 @@ from __future__ import annotations
 
 import pytest
 
-from admin_workflow.approvals.action_gate import Effect, UnapprovedActionError
+from admin_workflow.approvals.action_gate import UnapprovedActionError
 from admin_workflow.approvals.ledger import SeparationOfDutyError, UnauthorizedRole
 from admin_workflow.audit.replay import project_case
 from admin_workflow.decisions import critical_signal as cs
 from admin_workflow.decisions.clearance import evaluate_release_eligibility
-from admin_workflow.decisions.escalation_outcome import DispatchApproval, GovernanceBlocker
-from admin_workflow.domain.models import Resolution, Role, Stage
+from admin_workflow.decisions.escalation_outcome import DispatchApproval
+from admin_workflow.domain.models import FieldSource, Resolution, Role, Stage
 from admin_workflow.safety.guard import ClinicalBoundaryViolation, assert_outbound_clean, check_inbound
 from admin_workflow.workflow.pipeline import record_clearance, run_intake
-
 from tests.conftest import read_case
 
 NOW = "2026-07-17T09:00:00"
@@ -65,6 +64,42 @@ def test_as2_unresolved_fields_become_owned_completion_tasks(runtime, repo_root)
     assert result.completion_tasks
     for task in result.completion_tasks:
         assert isinstance(task.owner, Role)   # FC-1 — exactly one accountable owner
+
+
+def test_as2_backfill_precedes_asking_a_human(runtime, repo_root) -> None:
+    """AS-2 / FR-003 — derive from records before requesting new input.
+
+    CASE-021 arrives with no ordering reference. CASE-009 carries one for the
+    same patient, so the value is derivable and must be derived rather than
+    chased. Asking a human for something already on file is exactly the
+    re-typing this system exists to remove.
+    """
+    intake(runtime, repo_root, "CASE-009")
+    result = intake(runtime, repo_root, "CASE-021")
+    assert result.backfilled, "a derivable value was not derived"
+    names = {c.field_name for c in result.backfilled}
+    assert "ordering_reference" in names
+    assert "ordering_reference" not in {t.field_name for t in result.completion_tasks}
+
+
+def test_as2_backfilled_value_is_distinguishable_from_a_submitted_one(runtime, repo_root) -> None:
+    """FR-004 — provenance is what separates a derived value from an invented one."""
+    intake(runtime, repo_root, "CASE-009")
+    result = intake(runtime, repo_root, "CASE-021")
+    fv = result.case.record.get("ordering_reference")
+    assert fv.source is FieldSource.BACKFILLED
+    assert fv.derived_from == "CASE-009"
+    kinds = [e.event_type for e in runtime.store.for_case("CASE-021")]
+    assert "case.backfilled" in kinds
+
+
+def test_as2_extraction_snapshot_still_shows_the_field_as_absent(runtime, repo_root) -> None:
+    """A backfilled value was still missing from the document. Grading extraction
+    against the post-backfill record would overstate what was actually read."""
+    intake(runtime, repo_root, "CASE-009")
+    result = intake(runtime, repo_root, "CASE-021")
+    assert result.extracted.get("ordering_reference").resolution is Resolution.MISSING
+    assert result.case.record.get("ordering_reference").resolution is Resolution.PRESENT
 
 
 def test_as2_not_applicable_never_raises_a_completion_task(runtime, repo_root) -> None:

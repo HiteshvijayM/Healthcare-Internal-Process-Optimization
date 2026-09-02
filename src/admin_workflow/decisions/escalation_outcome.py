@@ -14,7 +14,7 @@ two have different owners and different remediation paths.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from ..approvals.ledger import DesignationSet
 from ..domain.models import Designation, EscalationPacket, Role

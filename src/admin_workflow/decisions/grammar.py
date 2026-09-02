@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import ast
 import re
-from typing import Any, Callable
+from typing import Any
 
 _LIST_RE = re.compile(r"\[.*?\]", re.S)
 

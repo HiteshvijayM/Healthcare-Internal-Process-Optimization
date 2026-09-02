@@ -10,7 +10,6 @@ import enum
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # --------------------------------------------------------------------------
 # Roles and designations — AC-1: `agent` is unrepresentable, not merely rejected
 # --------------------------------------------------------------------------

@@ -21,6 +21,7 @@ from ..approvals.action_gate import ActionGate, Effect
 from ..approvals.ledger import ApprovalLedger, DesignationSet
 from ..audit.store import EventStore
 from ..decisions import critical_signal as cs
+from ..decisions.backfill import RecordEntry, apply_backfill, find_backfill
 from ..decisions.clearance import evaluate_release_eligibility
 from ..decisions.duplicates import CaseIndexEntry, content_hash, detect_duplicate
 from ..decisions.escalation_outcome import (
@@ -33,9 +34,10 @@ from ..decisions.escalation_outcome import (
 from ..decisions.plausibility import find_contradictions
 from ..decisions.provisional import may_route_provisionally
 from ..decisions.routing import decide_route
-from ..decisions.sla import UrgencyClass, evaluate_sla, resolve_sla, urgency_from_text
+from ..decisions.sla import UrgencyClass, resolve_sla, urgency_from_text
 from ..domain.models import (
     Case,
+    CaseRecord,
     CompletionTask,
     DraftArtifact,
     EscalationPacket,
@@ -50,20 +52,30 @@ from ..drafting.drafter import (
 )
 from ..extraction.extractor import Extractor
 from ..policy.bundle import PolicyBundle
-from ..policy.resolvers import owner_for_field, queue_approver
+from ..policy.resolvers import owner_for_field
 from ..safety.guard import check_inbound
 
 #: Fields that must be resolved before an item may advance. ``supporting_notes``
 #: is excluded: it is narrative and never blocks progression.
 MANDATORY_FIELDS = ("requester", "patient_reference", "requested_service", "urgency")
 
+#: Fields worth backfilling from prior records before asking a human (F3, FR-003).
+#: Wider than MANDATORY_FIELDS: a derivable value should be filled whether or not
+#: its absence would have blocked the case, because asking a human for something
+#: already on file is exactly the re-typing this system exists to remove.
+BACKFILLABLE_FIELDS = ("payer_plan", "ordering_reference", "requester", "urgency")
+
 
 @dataclass
 class WorkflowResult:
     case: Case
     routing: Any = None
+    #: What the source document said, snapshotted before backfill. Extraction
+    #: accuracy is graded against this; the live case record evolves past it.
+    extracted: CaseRecord | None = None
     drafts: list[DraftArtifact] = field(default_factory=list)
     completion_tasks: list[CompletionTask] = field(default_factory=list)
+    backfilled: list[Any] = field(default_factory=list)
     contradictions: list[Any] = field(default_factory=list)
     escalation: Any = None
     packet: EscalationPacket | None = None
@@ -84,6 +96,9 @@ class Runtime:
     designations: DesignationSet
     extractor: Extractor = field(default_factory=Extractor)
     index: list[CaseIndexEntry] = field(default_factory=list)
+    #: Prior cases keyed by patient reference — the "available records" FR-003
+    #: permits backfilling from. Populated as cases are registered.
+    record_store: dict[str, list[RecordEntry]] = field(default_factory=dict)
 
 
 def run_intake(
@@ -128,6 +143,26 @@ def run_intake(
     store.append(event_type="case.extracted", actor="assistant", timestamp=arrived_at,
                  case_id=case_id, policy_version=version,
                  payload={"fields": {n: f.resolution.value for n, f in case.record.fields.items()}})
+    # Snapshot what the *document* said, before any backfill runs. Extraction
+    # accuracy and omission detection are graded against this: a value backfilled
+    # from records was still absent from the source, and reporting it as
+    # extracted would overstate what the reader actually read (FR-002, FR-004).
+    result.extracted = CaseRecord(fields=dict(case.record.fields))
+
+    # -- F3 / FR-003, FR-004: backfill before asking a human -----------------
+    # Derive what is reliably derivable from prior records for the same patient,
+    # and infer nothing that is not. Every derived value is tagged with the case
+    # it came from, so it stays distinguishable from a submitted one.
+    candidates = find_backfill(case.record, BACKFILLABLE_FIELDS, runtime.record_store,
+                               exclude_case_id=case_id)
+    if candidates:
+        apply_backfill(case.record, candidates)
+        result.backfilled = list(candidates)
+        for candidate in candidates:
+            store.append(event_type="case.backfilled", actor="assistant", timestamp=arrived_at,
+                         case_id=case_id, policy_version=version,
+                         payload={"field": candidate.field_name,
+                                  "derived_from": candidate.source_case_id})
 
     # -- F13 / FR-057: critical-signal detection, register-only ---------------
     try:
@@ -259,6 +294,17 @@ def run_intake(
         content_hash=content_hash(document_text),
         closed=False,
     ))
+    # Register the case as an available record for later arrivals (F3). Only
+    # values that are actually PRESENT are exposed — a missing or disputed value
+    # must never become a backfill source for the next case.
+    patient = case.record.value_of("patient_reference")
+    if patient:
+        runtime.record_store.setdefault(patient, []).append(RecordEntry(
+            case_id=case_id,
+            patient_reference=patient,
+            fields={n: str(f.value) for n, f in case.record.fields.items()
+                    if f.resolution is Resolution.PRESENT and f.value is not None},
+        ))
     return result
 
 

@@ -8,9 +8,21 @@ from __future__ import annotations
 
 import pytest
 
+from admin_workflow.approvals.ledger import DesignationSet
 from admin_workflow.decisions import critical_signal as cs
+from admin_workflow.decisions.backfill import (
+    RecordEntry,
+    apply_backfill,
+    build_record_store,
+    find_backfill,
+)
 from admin_workflow.decisions.clearance import evaluate_release_eligibility, may_record_clearance
-from admin_workflow.decisions.duplicates import CaseIndexEntry, content_hash, detect_duplicate, normalize_content
+from admin_workflow.decisions.duplicates import (
+    CaseIndexEntry,
+    content_hash,
+    detect_duplicate,
+    normalize_content,
+)
 from admin_workflow.decisions.escalation_outcome import (
     CompletenessBlocker,
     DispatchApproval,
@@ -23,7 +35,6 @@ from admin_workflow.decisions.plausibility import find_contradictions
 from admin_workflow.decisions.provisional import may_route_provisionally
 from admin_workflow.decisions.routing import decide_route
 from admin_workflow.decisions.sla import UrgencyClass, evaluate_sla, resolve_sla, urgency_from_text
-from admin_workflow.approvals.ledger import DesignationSet
 from admin_workflow.domain.models import (
     Case,
     CaseRecord,
@@ -526,3 +537,79 @@ def test_stat_on_a_routine_service_is_surfaced_as_a_contradiction() -> None:
 def test_urgent_on_a_time_sensitive_service_is_not_a_contradiction() -> None:
     case = make_case(urgency="Urgent", requested_service="Urgent imaging review scheduling")
     assert find_contradictions(case) == []
+
+
+# ===========================================================================
+# backfill — F3, FR-003, FR-004
+# ===========================================================================
+
+
+def _store(*entries: tuple[str, str, dict]) -> dict[str, list[RecordEntry]]:
+    return build_record_store([RecordEntry(cid, pat, fields) for cid, pat, fields in entries])
+
+
+def test_backfill_derives_a_missing_value_from_a_prior_case() -> None:
+    record = make_case(patient_reference="SYN-PT-1", ordering_reference=None).record
+    store = _store(("CASE-009", "SYN-PT-1", {"ordering_reference": "ORD-2026-3450"}))
+    found = find_backfill(record, ("ordering_reference",), store)
+    assert len(found) == 1
+    assert found[0].value == "ORD-2026-3450"
+    assert found[0].source_case_id == "CASE-009"
+
+
+def test_backfilled_value_is_tagged_with_its_source() -> None:
+    """FR-004 — an untagged backfill is indistinguishable from an invented one."""
+    record = make_case(patient_reference="SYN-PT-1", ordering_reference=None).record
+    store = _store(("CASE-009", "SYN-PT-1", {"ordering_reference": "ORD-1"}))
+    apply_backfill(record, find_backfill(record, ("ordering_reference",), store))
+    fv = record.get("ordering_reference")
+    assert fv.source is FieldSource.BACKFILLED
+    assert fv.derived_from == "CASE-009"
+    assert fv.resolution is Resolution.PRESENT
+
+
+def test_backfill_never_crosses_patients() -> None:
+    """An exact identifier match, never a fuzzy one. A value from another
+    patient's record is not a derivation, it is a data breach."""
+    record = make_case(patient_reference="SYN-PT-1", ordering_reference=None).record
+    store = _store(("CASE-009", "SYN-PT-2", {"ordering_reference": "ORD-OTHER"}))
+    assert find_backfill(record, ("ordering_reference",), store) == []
+
+
+def test_backfill_refuses_when_prior_records_conflict() -> None:
+    """FR-003 forbids inferring. Picking one of two disagreeing records silently
+    is exactly that, so the field stays missing and a human resolves it."""
+    record = make_case(patient_reference="SYN-PT-1", payer_plan=None).record
+    store = _store(
+        ("CASE-001", "SYN-PT-1", {"payer_plan": "Plan A"}),
+        ("CASE-002", "SYN-PT-1", {"payer_plan": "Plan B"}),
+    )
+    assert find_backfill(record, ("payer_plan",), store) == []
+
+
+def test_backfill_leaves_a_field_missing_when_no_record_holds_it() -> None:
+    record = make_case(patient_reference="SYN-PT-1", payer_plan=None).record
+    store = _store(("CASE-001", "SYN-PT-1", {"ordering_reference": "ORD-1"}))
+    assert find_backfill(record, ("payer_plan",), store) == []
+    assert record.get("payer_plan").resolution is Resolution.MISSING
+
+
+def test_backfill_never_overwrites_a_submitted_value() -> None:
+    record = make_case(patient_reference="SYN-PT-1", payer_plan="From the document").record
+    store = _store(("CASE-001", "SYN-PT-1", {"payer_plan": "From records"}))
+    assert find_backfill(record, ("payer_plan",), store) == []
+    assert record.value_of("payer_plan") == "From the document"
+
+
+def test_backfill_excludes_the_case_being_processed() -> None:
+    """A case must never backfill from itself."""
+    record = make_case(patient_reference="SYN-PT-1", payer_plan=None).record
+    store = _store(("CASE-SELF", "SYN-PT-1", {"payer_plan": "X"}))
+    assert find_backfill(record, ("payer_plan",), store, exclude_case_id="CASE-SELF") == []
+
+
+def test_backfill_requires_a_patient_reference() -> None:
+    """With no identifier there is no safe way to select a record at all."""
+    record = make_case(patient_reference=None, payer_plan=None).record
+    store = _store(("CASE-001", "SYN-PT-1", {"payer_plan": "X"}))
+    assert find_backfill(record, ("payer_plan",), store) == []

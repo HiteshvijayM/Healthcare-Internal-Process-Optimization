@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "admin-workflow-assistant"
+version = "0.1.0"
+description = "Administrative Workflow Assistant — healthcare internal process optimization, human-approved at every outbound step"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+
+# The deterministic core and the evaluation harness depend only on these two.
+# That is deliberate: P7 requires the harness to score the system reproducibly,
+# so nothing on the graded path may need a model backend or a network call.
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# The conversational surface and workflow-graph binding. Separated because the
+# graded path must remain runnable without them (see plan.md, decision D4).
+agent = [
+    "agent-framework",      # Microsoft Agent Framework — workflow graph, executors, HITL
+    "pydantic>=2.0",
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+admin-workflow = "admin_workflow.surface.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.json"]
