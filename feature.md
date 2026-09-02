@@ -143,16 +143,20 @@ Every number the validation harness scores against lives here, in one place a no
 | ID | Policy | Value |
 |---|---|---|
 | **P1** | Provisional routing confidence (F6) | Permitted only when routing confidence is **≥ 0.80** *and* both `patient_reference` and `requested_service` are present. Never permitted while a critical signal is active or a clearance gate is pending. |
-| **P2** | Duplicate detection window (F8) | **72 hours** from first receipt. Match on sender + patient reference + requested service. Channel does not matter — a fax resend of an email request is still a duplicate. |
+| **P2** | Duplicate detection (F8) | Two independent matches. **(a) Key match — 72 hours** from first receipt, on sender + patient reference + requested service. **(b) Identity match — no time bound**, on document identity: the same immutable source-document identifier, or identical normalized content where normalization strips transport-added material only (cover sheets, routing headers, arrival timestamps, watermarks, re-transmission banners). Channel does not matter for either — a fax resend of an email request is still a duplicate. The 72-hour window bounds the key match only and must never suppress an identity match. The window is a tunable policy parameter, not a constant. On match: flag and hold for human adjudication — never auto-discard, never auto-merge. |
 | **P3** | Escalation packet completeness (F13) | **100% of mandatory fields**, no partial sends. Mandatory: case ID, patient reference, requester, critical-signal description, source document reference, timestamp, designated clinical recipient. |
-| **P4** | Approval SLAs (F15) | Routine **2 business days** · Urgent **4 hours** · Critical escalation acknowledgement **30 minutes**. |
+| **P4** | Approval SLAs (F15) | **Defaults:** Routine **2 business days** · Urgent **4 hours** · Critical escalation acknowledgement **30 minutes**. **Resolution model:** an SLA resolves per **urgency class *and* service line**. A service line may register an override that is *shorter* than the default; a longer override requires Compliance Reviewer approval. **Floor:** a critical-acknowledgement override MUST remain strictly greater than **P10**, and the policy bundle MUST reject at freeze time any override that is not — otherwise the P10 deadline becomes unsatisfiable and every escalation in that service line would sit as a permanent governance blocker. Where a service line registers no override the default applies. Where a service line registers no override the default applies. The value actually applied must be recorded against the item, so a breach is audited against the value in force at the time. The critical acknowledgement clock starts **at detection of the critical signal**, not at dispatch, and must not start where no on-call clinical coverage is configured (see §4.2 of the harness — raise a governance blocker instead). |
 | **P5** | SLA alert timing (F15) | Early-warning alert at **80% of SLA elapsed**. Breach recorded at 100%. |
 | **P6** | Rework-loop limit | Maximum **2** rework loops per case, then mandatory human escalation. A third loop is a Sev 2 defect. |
 | **P7** | Run-to-run drift tolerance (F21) | Aggregate scores within **±2 percentage points** between runs on the same dataset and build. Per-case outcome classifications must be **100% identical** — determinism is not negotiable. |
-| **P8** | Audit retention (F20) | Full case lineage retained for the **entire project lifetime, minimum 90 days**. No purge before review sign-off. *Production would require 6 years under HIPAA — out of scope here, but named so the gap is visible.* |
+| **P8** | Audit retention (F20) | Full case lineage retained for the **entire project lifetime, minimum 90 days**. No purge before review sign-off. *Production would require 6 years under HIPAA — out of scope here, but named so the gap is visible. Raising this value is a hard precondition of ever processing real data.* |
 | **P9** | Chat surface scope (F22) | A **single web/in-app conversational surface**, one demo tenant, one authenticated reviewer session. Teams, mobile, and email-in surfaces are out of scope. |
+| **P10** | Escalation dispatch-approval deadline (F13) | **10 minutes** from the escalation packet becoming complete and dispatch approval being raised. Must always be **strictly shorter** than the critical acknowledgement SLA applied to the case under P4, which the P4 override floor guarantees. Dispatch approval is a completeness-and-addressing check, not a clinical judgement, so it consumes the minority of the acknowledgement window and leaves the clinician the remainder — two-thirds at the 30-minute default. On breach: record the breach, keep the packet undispatched, and escalate to the named alternate approver (harness §4.2). Breach never authorises dispatch without an approval. |
+| **P11** | Critical-condition signal register (F13, F19) | Detection matches **only** against the versioned register in [`docs/critical-condition-register.md`](docs/critical-condition-register.md). No inference beyond registered entries. Where the register is absent, empty, or its version cannot be resolved: raise a governance blocker and hold the case. Absence of a match must never be reported as evidence that no critical condition is present. Register in force for this build: **`CCR-DEMO-v1`**. |
 
-P1 and P3 are safety-bearing. Loosening either requires Compliance Reviewer approval, not just Team Lead.
+P1, P3, P10 and P11 are safety-bearing. Loosening any of them requires Compliance Reviewer approval, not just Team Lead.
+
+**Amendment history.** P2 (identity match), P4 (per-service-line resolution model), P10 and P11 were ratified under CHG-021. P1 was re-confirmed at 0.80 unchanged.
 
 ---
 
@@ -179,7 +183,7 @@ Small, provable, and directly tied to the two expected values.
 |---|---|---|
 | End-to-end time per item | Agent path measurably faster than manual | Stopwatch both paths under the §13.3 baseline protocol — same document, 3-run manual median, reported as a range |
 | Avoidable serial handoffs per item | Reduced from ~6 sequential desks by parallelising eligible approvals and tasking | Count the steps that must happen *in sequence*, before vs after |
-| Time to first action | < 30 seconds from intake to draft ready | Timestamped in the status board |
+| Time to first action | **< 30 seconds at the 95th percentile** (nearest-rank) from intake to draft ready | Timestamped in the status board, over every graded case. The graded sample size is reported alongside the figure, and every case above the bound is itemised with its cause. |
 
 > We measure *serial* handoffs, not total human touches. The journey deliberately keeps multiple humans in the loop — five role approvers (F11) plus mandatory clinical (F16) and financial (F17) clearance gates. The win is that those approvals run in parallel instead of queueing behind each other, not that people are removed.
 
@@ -189,13 +193,15 @@ Validation rule: cycle-time claims are valid only if confirmed through a passing
 
 | Metric | Target | How we measure |
 |---|---|---|
-| Field extraction accuracy | ≥ 85% of fields correct | 20 sample case documents, human-graded |
+| Field extraction accuracy | ≥ 85% of graded fields correct | 20 sample case documents × 7 graded fields (n = 140), human-graded against `data/sample/answer-key.json`. `supporting_notes` is extracted but not graded. |
 | Missing-field detection | Catches every seeded omission | 10 documents with fields deliberately removed |
 | Routing accuracy | ≥ 9 / 10 correct | 10 sample items with known correct queues |
 | First-pass completeness | ≥ 90% of items reach routing with complete data | Count items that needed a rework loop |
 | Unapproved sends | **0** | Verified live in demo |
 
 Validation rule: error-rate claims are valid only if confirmed through a passing run in [`docs/multipass-validation-harness.md`](docs/multipass-validation-harness.md).
+
+**Reporting rule.** Every percentage above is reported with its graded sample size (`n`), and every percentile figure names its estimator. A percentage without a denominator is not a measurement and may not be cited as evidence.
 
 > We are deliberately **not** claiming dollar savings or FTE reduction. We claim cycle time and error rate, because those are the stated expected values and they are the ones we can actually measure within this build's scope.
 

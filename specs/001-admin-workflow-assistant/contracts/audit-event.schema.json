@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://healthcare-ipo.local/contracts/audit-event.schema.json",
+  "title": "Audit Event",
+  "description": "The system of record. Every other piece of state is a projection built by replaying these events (research.md D14). Append-only, hash-chained, identifier-masked at write. Governs FR-042..FR-045, FR-047, SC-012, constitution section 4.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "sequence",
+    "case_id",
+    "event_type",
+    "timestamp",
+    "actor_role",
+    "payload",
+    "prev_hash",
+    "hash",
+    "masking_applied"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Globally unique event identifier."
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonically increasing per case. Supplies the ordered history required by FR-042."
+    },
+    "case_id": {
+      "type": "string",
+      "description": "The case this event belongs to."
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "case_arrived",
+        "document_unreadable",
+        "field_extracted",
+        "field_backfilled",
+        "validation_finding",
+        "completion_task_opened",
+        "completion_task_closed",
+        "rule_evaluated",
+        "routing_decided",
+        "routing_superseded",
+        "duplicate_flagged",
+        "duplicate_adjudicated",
+        "artifact_appended",
+        "approval_opened",
+        "approval_decided",
+        "draft_generated",
+        "draft_edited",
+        "sla_applied",
+        "sla_warning",
+        "sla_breached",
+        "critical_signal_detected",
+        "critical_register_unresolvable",
+        "escalation_packet_prepared",
+        "escalation_outcome_resolved",
+        "dispatch_approval_raised",
+        "dispatch_approval_decided",
+        "dispatch_deadline_breached",
+        "escalation_dispatched",
+        "clearance_recorded",
+        "clearance_refused",
+        "release_routed",
+        "release_refused",
+        "refusal_recorded",
+        "blocker_raised",
+        "blocker_resolved",
+        "rework_loop_incremented",
+        "case_escalated_to_human_owner",
+        "case_completed"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC. FR-042 requires a timestamp on every event."
+    },
+    "actor_role": {
+      "type": "string",
+      "enum": [
+        "intake_coordinator",
+        "insurance_approver",
+        "operations_approver",
+        "diagnostics_approver",
+        "legal_approver",
+        "finance_approver",
+        "clinical_authority",
+        "finance_clearance_approver",
+        "team_lead",
+        "compliance_reviewer",
+        "team_validation_lead",
+        "agent",
+        "system"
+      ],
+      "description": "Authority, never a person. 'agent' is FORBIDDEN on approval_decided, dispatch_approval_decided, clearance_recorded and release_routed events (FR-038)."
+    },
+    "actor_principal_ref": {
+      "type": ["string", "null"],
+      "description": "Masked reference to the acting principal. Required for separation-of-duty checks (FR-034), masked per FR-044."
+    },
+    "policy_version": {
+      "type": ["string", "null"],
+      "description": "Policy bundle id in force at decision time. REQUIRED for all routing_* and approval_* and escalation_* events (FR-045)."
+    },
+    "register_version": {
+      "type": ["string", "null"],
+      "description": "Critical-condition register version. REQUIRED on critical_signal_detected and escalation_* events (FR-057)."
+    },
+    "stage": {
+      "type": ["string", "null"],
+      "enum": [
+        "registered",
+        "enriched",
+        "validated",
+        "routed",
+        "approvals",
+        "clinical_gate",
+        "financial_gate",
+        "release_routed",
+        "completed",
+        null
+      ]
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific detail. Written through the masking filter (FR-044, research D15)."
+    },
+    "masking_applied": {
+      "type": "boolean",
+      "const": true,
+      "description": "Structural assertion that this record passed the masking filter. SC-012 requires zero unmasked personal identifiers."
+    },
+    "prev_hash": {
+      "type": ["string", "null"],
+      "description": "SHA-256 of the previous event in this case's chain; null for the first event."
+    },
+    "hash": {
+      "type": "string",
+      "description": "SHA-256 over the canonical serialisation of this event including prev_hash. Supplies the tamper resistance scored by harness Pass 4."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "enum": [
+              "routing_decided",
+              "routing_superseded",
+              "approval_opened",
+              "approval_decided",
+              "escalation_outcome_resolved",
+              "dispatch_approval_decided",
+              "clearance_recorded",
+              "release_routed"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "policy_version": { "type": "string" }
+        },
+        "required": ["policy_version"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "enum": [
+              "approval_decided",
+              "dispatch_approval_decided",
+              "clearance_recorded",
+              "release_routed"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_role": {
+            "not": { "enum": ["agent", "system"] }
+          }
+        },
+        "description": "FR-038 / FR-030: the agent may never be the actor on an approving event."
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "enum": ["critical_signal_detected", "escalation_packet_prepared", "escalation_outcome_resolved", "escalation_dispatched"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "register_version": { "type": "string" }
+        },
+        "required": ["register_version"],
+        "description": "FR-057 / FR-045: the register version in force is recorded against every escalation decision."
+      }
+    }
+  ],
+  "$comment": "Replay invariant (FR-043, INV-AU3): replaying every event for a case in sequence order must reproduce arrival, extracted data, backfilled values AND their sources, rules fired, approvals AND approvers, human edits, escalations, refusals, and timestamps. A projection that cannot be rebuilt from these events is a contract violation, not a bug in the projection."
+}
