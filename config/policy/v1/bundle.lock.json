@@ -1,15 +1,15 @@
 {
-    "bundle_id":  "POLICY-v2",
-    "frozen_at":  "2026-09-03T03:24:05+00:00",
-    "dataset_id":  "SYN-CASESET-v2",
-    "register_version":  "CCR-DEMO-v1",
-    "files":  {
-                  "policy-table.yaml":  "sha256:b720849b5903863854351c986656979e7143632c1c0cb5bb6879f10b733c1136",
-                  "routing-rules.yaml":  "sha256:639f2f2fd582090e6e9821dd6b1738f6bac1e0e39d7e5f1804bf4cf875cb3639",
-                  "approver-registry.yaml":  "sha256:6f1b0f2fbf19b1c5d90c76786e04ba69593a176d83b13ac29ee00e9784ea96cd",
-                  "field-owner-map.yaml":  "sha256:2609d03c8e77eecbacd4fb786505d3e7aa10abd83a145efc72db9248169b856d",
-                  "sla-table.yaml":  "sha256:90d5c5ff8776709e6de9578325dd137659fd4c4f05e2598c3690681834254fc5",
-                  "critical-signal-register.yaml":  "sha256:44b7173e658f7dfc0547bbf90c990ec4d25fb13547ed66e971eccce390e59ceb",
-                  "docs/critical-condition-register.md":  "sha256:b2f6edc01e603d9490844976043449b323578472d0bb4c0c00af201d9c7ba3a5"
-              }
+  "bundle_id": "POLICY-v2",
+  "frozen_at": "2026-09-03T03:32:05+00:00",
+  "dataset_id": "SYN-CASESET-v2",
+  "register_version": "CCR-DEMO-v1",
+  "files": {
+    "policy-table.yaml": "sha256:7e893ef3cbe883ac08ed53c38b2096b174ed2adb408bffac4a0bf9052fe65029",
+    "routing-rules.yaml": "sha256:d73a9e86ef821acd3dfe3d0d2127b168b856cdcaf24d93711150b3dcabbc5647",
+    "approver-registry.yaml": "sha256:d4b07cd9c3b01101723de2d68af45f88db918fc95815316a65c5cc4d9e79413d",
+    "field-owner-map.yaml": "sha256:1454b07efb85d2b861036ee4d596f4b8fdfbadbe07a4f65c9dcbe2a9e2db25aa",
+    "sla-table.yaml": "sha256:39489a9fdd2411177a8c495bc59b0110c2295c395312a533fd8c685c42af2d55",
+    "critical-signal-register.yaml": "sha256:bb17babbb6cb936addd9cbebb1550db2a00b6539bd6c06ffadb2403db2d14090",
+    "docs/critical-condition-register.md": "sha256:b2c4f8ff4cd46ceb59a18336d26d50027484a63b364ad4b3066a730f8e87c14e"
+  }
 }
