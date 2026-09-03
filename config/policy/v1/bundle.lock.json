@@ -1,0 +1,15 @@
+{
+  "bundle_id": "POLICY-v2",
+  "frozen_at": "2026-09-03T03:32:05+00:00",
+  "dataset_id": "SYN-CASESET-v2",
+  "register_version": "CCR-DEMO-v1",
+  "files": {
+    "policy-table.yaml": "sha256:7e893ef3cbe883ac08ed53c38b2096b174ed2adb408bffac4a0bf9052fe65029",
+    "routing-rules.yaml": "sha256:d73a9e86ef821acd3dfe3d0d2127b168b856cdcaf24d93711150b3dcabbc5647",
+    "approver-registry.yaml": "sha256:d4b07cd9c3b01101723de2d68af45f88db918fc95815316a65c5cc4d9e79413d",
+    "field-owner-map.yaml": "sha256:1454b07efb85d2b861036ee4d596f4b8fdfbadbe07a4f65c9dcbe2a9e2db25aa",
+    "sla-table.yaml": "sha256:39489a9fdd2411177a8c495bc59b0110c2295c395312a533fd8c685c42af2d55",
+    "critical-signal-register.yaml": "sha256:bb17babbb6cb936addd9cbebb1550db2a00b6539bd6c06ffadb2403db2d14090",
+    "docs/critical-condition-register.md": "sha256:b2c4f8ff4cd46ceb59a18336d26d50027484a63b364ad4b3066a730f8e87c14e"
+  }
+}

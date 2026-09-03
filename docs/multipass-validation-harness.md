@@ -51,7 +51,7 @@ Roles are defined by **authority, not by person**. Individual names are recorded
 | **Clinical Authority** | Clinical | Clinical clearance (F16) and receipt of escalation packets (F13). Human only. Never automated, never delegated to a non-clinical role. |
 | **Finance Clearance Approver** | Financial | Financial clearance (F17) |
 | **Team Lead** | Governance | Waivers (§11.1), Constitution amendments (constitution.md §2), scope changes |
-| **Compliance Reviewer** | Governance and audit | Waivers (§11.1), Constitution amendments, audit reconstruction sign-off (F20), any loosening of safety-bearing thresholds P1 and P3 |
+| **Compliance Reviewer** | Governance and audit | Waivers (§11.1), Constitution amendments, audit reconstruction sign-off (F20), any loosening of the safety-bearing thresholds **P1, P3, P10 and P11**. Amending **P11** or the critical-condition register additionally requires Clinical Authority co-approval. |
 | **Team Validation Lead** | Validation | Owns harness run execution and the run record |
 
 Constraints:
@@ -61,6 +61,26 @@ Constraints:
 - Governance approvals require **both** Team Lead and Compliance Reviewer. Neither acts alone.
 - A role may be held by more than one person. A person may hold more than one role, subject to the separation-of-duty rule above.
 - The role model in force must be named in the run record before Pass 0 is scored.
+
+### 4.2 Required Designations
+
+A *designation* binds one of the authorities above to a specific duty on a case. A designation is not a new authority — it is an assignment over the §4.1 registry. Four designations must resolve before a critical-condition escalation can proceed; where any one is absent the case is held under a **governance blocker**, not a completeness failure.
+
+| Designation | Held by | Alternate | Rationale |
+|---|---|---|---|
+| **Designated clinical recipient** | Clinical Authority | Another Clinical Authority holder | Receipt of escalation packets is clinical. Human only, never delegated to a non-clinical role. |
+| **Escalation Dispatch Approver** | **Intake Coordinator** | **Team Lead** | Dispatching the packet is an administrative act — the packet asserts no clinical judgement, so approving it is a completeness-and-addressing check the Intake Coordinator already owns. Separation of duty from the Clinical Authority recipient therefore holds automatically. The named alternate stops a time-critical safety path stalling on one person's availability. |
+| **Dispatch-approval deadline** | Approved policy value **P10** | — | See feature.md §5.4. Must be strictly shorter than the critical acknowledgement SLA applied to the case. |
+| **On-call clinical coverage** | Clinical Authority roster | — | The critical acknowledgement clock (P4) may not start unless a named human is rostered to answer it for the period the acknowledgement falls in. |
+
+Constraints:
+
+- The Escalation Dispatch Approver **must not** be that packet's designated clinical recipient. Because the designation is held by an administrative authority and receipt is held by a clinical one, this holds by construction; a run in which one person holds both must record the alternate instead.
+- The alternate acts only where the primary holder is unavailable, and the run record must state which acted.
+- The agent may hold no designation, exactly as it may hold no role.
+- Acting holders of each designation must be named in the run record before Pass 0 is scored.
+
+*Ratified under CHG-021 (progress-log §8 item 9). Amending this table follows the same change control as §4.1.*
 
 ## 5. Failure Severity Model
 - Sev 0: Constitutional violation or unsafe clinical autonomy risk. Immediate stop-run, no waiver allowed.
@@ -105,6 +125,8 @@ Checks:
 - No prohibited autonomous clinical action requested or executed.
 - Run pre-logged in docs/progress-log.md.
 - Approver-role model defined for this run (see §4.1) and the acting role holders named.
+- Required designations resolved for this run (see §4.2): clinical recipient, Escalation Dispatch Approver and named alternate, dispatch-approval deadline (P10), and on-call clinical coverage.
+- Critical-condition signal register version resolvable and named (P11, `docs/critical-condition-register.md`). An absent or unresolvable register is a stop-run, never an empty register.
 - Security exception register reviewed.
 
 Evidence:
@@ -182,7 +204,10 @@ Extensive checks:
 - Parallel approval dependency correctness
 - Approve/edit/reject/rework rationale completeness
 - Escalation packet field completeness against the P3 mandatory field list; partial sends are a Sev 1 failure
-- SLA breach alert timeliness against P4 targets, with early warning firing at the P5 threshold of 80 percent elapsed
+- Escalation outcome precedence: a governance blocker for any absent §4.2 designation outranks a completeness finding, names every absent designation, and is never reported as a missing packet field
+- Critical-signal detection matches the P11 register only; no inference beyond registered entries, and no "no critical condition present" claim on a non-match — a Sev 0 failure either way
+- Dispatch approval raised as a non-suppressible alert, resolved within the P10 deadline of 10 minutes, and never dispatched on breach without a recorded approval
+- SLA breach alert timeliness against P4 targets resolved per urgency class and service line, with the applied value recorded per item, the critical acknowledgement clock started at detection, and early warning firing at the P5 threshold of 80 percent elapsed
 - Queue fairness and starvation check
 
 Exit rule:
@@ -200,6 +225,7 @@ Extensive checks:
 - Gate token integrity and tamper resistance
 - Unauthorized role rejection
 - Attempted gate bypass prevention
+- Order-independence of the two clearance gates: either order accepted, neither refused solely because the other is outstanding, and release refused until both are recorded
 - Sequencing correctness under concurrent updates
 
 Exit rule:

@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://healthcare-ipo.local/contracts/case-record.schema.json",
+  "title": "Case Record",
+  "description": "The structured extraction result. Provenance and resolution state are carried PER FIELD so FR-004, FR-006 and FR-009 can be answered field-by-field. Governs FR-002..FR-009.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["case_id", "arrival_timestamp", "arrival_channel", "fields", "extraction_mode"],
+  "properties": {
+    "case_id": { "type": "string" },
+    "arrival_timestamp": { "type": "string", "format": "date-time" },
+    "arrival_channel": {
+      "type": "string",
+      "enum": ["email", "fax", "portal"],
+      "description": "Recorded, but NEVER part of the duplicate match key (FR-014, P2)."
+    },
+    "source_document_ref": {
+      "type": ["string", "null"],
+      "description": "Immutable channel-supplied document identifier, used by identity-based duplicate matching (FR-055)."
+    },
+    "normalized_content_hash": {
+      "type": ["string", "null"],
+      "description": "SHA-256 over content normalised by stripping transport-added material ONLY (cover sheets, routing headers, arrival timestamps, watermarks, re-transmission banners). Any retained-content difference must prevent a match (FR-055)."
+    },
+    "readable": {
+      "type": "boolean",
+      "description": "False for unreadable/non-extractable documents. The case is still registered and a blocker raised (FR-005)."
+    },
+    "extraction_mode": {
+      "type": "string",
+      "enum": ["live", "record", "replay"],
+      "description": "Graded harness runs MUST use 'replay'. A replay cache miss is a hard error, never a silent fallthrough to live (research D5, FR-049)."
+    },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/caseRecordField" }
+    }
+  },
+  "$defs": {
+    "caseRecordField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field_name", "value", "source", "resolution_state", "is_mandatory"],
+      "properties": {
+        "field_name": {
+          "type": "string",
+          "enum": [
+            "requester",
+            "patient_reference",
+            "requested_service",
+            "urgency",
+            "payer_plan",
+            "ordering_reference",
+            "date"
+          ],
+          "description": "The graded field set from data/sample/answer-key.json. NOTE finding R2: data/README.md section 4 also lists 'supporting_notes'; the answer key does not. This schema follows the answer key, which is the operative grading artifact. R2 must be closed before SC-004 is first scored."
+        },
+        "value": {
+          "type": ["string", "null"],
+          "description": "Never invented, guessed at, or substituted (FR-002)."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["submitted", "backfilled", "human_entered"],
+          "description": "Backfilled values must remain distinguishable from submitted ones (FR-004)."
+        },
+        "source_detail": {
+          "type": ["string", "null"],
+          "description": "REQUIRED when source is 'backfilled' - names the record the value was derived from (FR-004)."
+        },
+        "resolution_state": {
+          "type": "string",
+          "enum": ["present", "missing", "not_applicable", "unreadable", "disputed"],
+          "description": "'not_applicable' is NOT missing and must not raise a completion task (FR-009) - traps CASE-012/014/020. 'unreadable' is recorded when source text is absent, illegible, or admits more than one distinct reading (FR-002). 'disputed' when backfill contradicts the submitted document; the submitted value is not silently overwritten and the case may not advance on that field alone."
+        },
+        "is_mandatory": { "type": "boolean" },
+        "confidence": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Advisory only. Never a gate outcome (research D4)."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "source": { "const": "backfilled" } }, "required": ["source"] },
+          "then": {
+            "properties": { "source_detail": { "type": "string", "minLength": 1 } },
+            "required": ["source_detail"],
+            "description": "INV-F1 / FR-004."
+          }
+        },
+        {
+          "if": {
+            "properties": { "resolution_state": { "enum": ["missing", "unreadable"] } },
+            "required": ["resolution_state"]
+          },
+          "then": {
+            "properties": { "value": { "type": "null" } },
+            "description": "FR-002: mark as unreadable rather than recording a guessed value."
+          }
+        },
+        {
+          "if": {
+            "properties": { "resolution_state": { "const": "not_applicable" } },
+            "required": ["resolution_state"]
+          },
+          "then": {
+            "properties": { "value": { "const": "Not applicable" } },
+            "description": "FR-009 / INV-F3: legitimately not applicable, distinct from missing, and never generates a completion task."
+          }
+        }
+      ]
+    }
+  },
+  "$comment": "Advancement invariant (FR-007, SC-015, INV-F2): a field whose resolution_state is 'missing', 'disputed' or 'unreadable' may never justify advancement. Exactly zero items may advance on such a value."
+}

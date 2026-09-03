@@ -1,0 +1,55 @@
+# Critical-condition signal register — MIRROR ONLY
+#
+# CRC-1: this file is a mirror. docs/critical-condition-register.md is
+#        authoritative. A contract test asserts entry-for-entry equality and
+#        fails the build on drift.
+# CRC-2: matching is literal, case-insensitive, whitespace-normalised.
+#        No inference, generalisation, paraphrase or extension.
+# CRC-3: a non-match is reported ONLY as "no registered signal matched" —
+#        never as "no critical condition present". A violation is Sev 0.
+# CRC-4: absent / empty / unresolvable register => governance blocker, case held,
+#        provisional routing refused. A missing register is never an empty one.
+# CRC-5: multiple matches on one case produce ONE packet naming every matched ID.
+# CRC-6: amending this content requires Clinical Authority AND Compliance
+#        Reviewer, and mints a new register ID.
+
+register_id: "CCR-DEMO-v1"
+authoritative_source: "docs/critical-condition-register.md"
+match_mode: literal_marker            # no fuzzy, no semantic, no model call
+
+entries:
+  - id: CCS-001
+    signal: "Radiologist critical result flag"
+    markers:
+      - "critical result flag"
+      - "critical finding flagged"
+      - "critical result notification"
+    clinical_owner: clinical_authority
+
+  - id: CCS-002
+    signal: "Explicit clinician escalation request"
+    markers:
+      - "brought to the attention of the responsible clinical team without delay"
+      - "bring to the attention of the responsible clinical team without delay"
+      - "requires immediate clinical attention"
+      - "escalate to clinical authority"
+    clinical_owner: clinical_authority
+
+  - id: CCS-003
+    signal: "Laboratory critical-value notification"
+    markers:
+      - "critical value"
+      - "panic value"
+      - "critical value notification"
+    clinical_owner: clinical_authority
+    # Exercised by CASE-023 in SYN-CASESET-v2. See
+    # docs/critical-condition-register.md section 3.
+    fixture_coverage: [CASE-023]
+    never_evaluate_numeric_value: true
+
+excluded_explicitly:                  # recorded so the boundary is visible, register 2
+  - "Urgency: Urgent / STAT"
+  - "the word 'urgent' in a subject line"
+  - "any diagnosis, symptom, finding, medication or test name"
+  - "any numeric result compared against a range"
+  - "a patient's or requester's own assertion that a matter is critical"

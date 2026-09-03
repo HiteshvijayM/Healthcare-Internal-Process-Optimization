@@ -1,0 +1,42 @@
+line-length = 110
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "TID", "B"]
+ignore = [
+    "E501",   # line length is handled by the formatter
+    "B008",   # dataclass field defaults are idiomatic here
+    "TID252", # relative imports within the package are intentional; the boundary
+              # that matters is enforced by banned-api (TID251) and by the
+              # AST-scanning contract test, not by import style
+]
+
+# ---------------------------------------------------------------------------
+# The D4 trust boundary, enforced at lint time.
+#
+# `decisions/` must never reach a model-backed module. This rule is the fast
+# feedback loop; the authoritative check is the AST-scanning contract test in
+# tests/contract/test_contracts.py, which cannot be silenced by a noqa comment.
+# Two mechanisms, deliberately — a lint rule that a developer sees immediately,
+# and a test that a developer cannot wave through.
+# ---------------------------------------------------------------------------
+[lint.flake8-tidy-imports]
+# Relative imports within the package are fine and used throughout. What must
+# not happen is a *cross-boundary* import, which the banned-api rule below
+# catches by module rather than by import style.
+
+[lint.flake8-tidy-imports.banned-api]
+"admin_workflow.extraction".msg = "decisions/ must not import extraction/ — it would put a model call on a deterministic path and break P7 (see plan.md D4)"
+"admin_workflow.drafting".msg = "decisions/ must not import drafting/ — it would put a model call on a deterministic path and break P7 (see plan.md D4)"
+"admin_workflow.surface".msg = "decisions/ must not import surface/ — decision functions are pure and I/O-free"
+
+[lint.per-file-ignores]
+# Only `decisions/` is bound by the banned-api rule above; the workflow layer
+# legitimately composes both sides of the boundary.
+"src/admin_workflow/workflow/*.py" = ["TID251"]
+"src/admin_workflow/eval/*.py" = ["TID251"]
+"src/admin_workflow/surface/*.py" = ["TID251", "E402"]
+"tests/*" = ["TID251"]
+
+[lint.isort]
+known-first-party = ["admin_workflow"]

@@ -1,0 +1,28 @@
+# Approval SLA table — P4 / P5
+#
+# SC-1: resolution is by (urgency_class, service_line); where no override exists
+#       the default applies.
+# SC-2: an override LONGER than the default is rejected at load unless it carries
+#       a recorded Compliance Reviewer approval (P4 shorter_only).
+# SC-3: the resolved value is written onto the item as applied_sla_seconds with
+#       sla_resolved_from, so breaches are audited against the value in force.
+# SC-4: a critical_acknowledgement override that would make P10's 10 minutes not
+#       strictly shorter is rejected at load — the P4 floor. The escalation
+#       resolver additionally raises a governance blocker (FR-052) rather than
+#       adjusting either value.
+
+sla_version: "SLA-v1"
+
+defaults:
+  routine:                  {seconds: null, business_days: 2}
+  urgent:                   {seconds: 14400}
+  critical_acknowledgement: {seconds: 1800}
+
+business_calendar:
+  work_days: [mon, tue, wed, thu, fri]
+  work_hours: "09:00-17:00"
+  timezone: "UTC"
+
+# Each entry must be SHORTER than the default (P4 shorter_only) and, for
+# critical_acknowledgement, must remain strictly greater than P10 (the floor).
+service_line_overrides: []

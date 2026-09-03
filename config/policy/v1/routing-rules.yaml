@@ -1,0 +1,64 @@
+# Routing rules — F7, FR-017, FR-018
+#
+# Ordered. First match wins (RC-1). The terminal `always` rule is mandatory (RC-2).
+# Every rule carries a plain-English description, and the trace shows the
+# description rather than the `when` expression (RC-3), so a non-technical
+# reviewer can name the rule that produced any decision without assistance.
+#
+# `when` uses a restricted grammar only (RC-5):
+#   field references, string/number literals, and the operators
+#   equals, contains, contains_any, in, is_present, is_missing, and, or, not, always.
+# There is no arbitrary code evaluation.
+
+rules_version: "ROUTE-v1"
+queues: [Insurance, Operations, Diagnostics, Legal, Finance]   # fixed set, feature.md 13.5
+
+rules:
+  - id: R-005
+    description: "Multi-step coordination spanning several teams is owned end-to-end by Operations, even where it touches imaging or coverage."
+    when: "requested_service contains_any ['multi-step','multistep','workup coordination','coordination:','care coordination']"
+    queue: Operations
+    reason_template: "Routed to Operations: the request is for {requested_service}, which spans several teams and is coordinated end-to-end rather than split (rule R-005)."
+    confidence: 0.91
+
+  - id: R-010
+    description: "Records disclosure, subpoena, or compliance/audit retrieval requests go to Legal."
+    when: "requested_service contains_any ['records disclosure','records release','records retrieval','subpoena','audit retrieval','audit records','compliance retrieval','release of information','disclosure request']"
+    queue: Legal
+    reason_template: "Routed to Legal: the request is for {requested_service}, which is a records-disclosure matter (rule R-010)."
+    confidence: 0.95
+
+  - id: R-020
+    description: "Billing, statements, payment plans, or coverage that is already settled go to Finance."
+    when: "requested_service contains_any ['billing','statement','payment plan','financial clearance','self-pay','outstanding balance'] or coverage_status equals 'settled'"
+    queue: Finance
+    reason_template: "Routed to Finance: {reason_detail} (rule R-020)."
+    confidence: 0.90
+
+  - id: R-030
+    description: "Imaging, laboratory and diagnostic order handling go to Diagnostics."
+    when: "requested_service contains_any ['imaging','radiology','ultrasound','mri','ct scan','x-ray','scan','laboratory','lab order','diagnostic','test scheduling']"
+    queue: Diagnostics
+    reason_template: "Routed to Diagnostics: the request is for {requested_service}, which is diagnostic order handling (rule R-030)."
+    confidence: 0.92
+
+  - id: R-040
+    description: "Eligibility, coverage confirmation and benefits enquiries go to Insurance."
+    when: "requested_service contains_any ['eligibility','coverage verification','coverage confirmation','coverage check','benefits','authorisation status','authorization status']"
+    queue: Insurance
+    reason_template: "Routed to Insurance: the request is for {requested_service}, which is an eligibility or benefits matter (rule R-040)."
+    confidence: 0.93
+
+  - id: R-050
+    description: "Scheduling, transfers, admissions and release preparation go to Operations."
+    when: "requested_service contains_any ['scheduling','appointment','transfer','admission','discharge preparation','release preparation','intake']"
+    queue: Operations
+    reason_template: "Routed to Operations: the request is for {requested_service}, which is a scheduling or coordination matter (rule R-050)."
+    confidence: 0.88
+
+  - id: R-999
+    description: "Anything not matched above is general intake and goes to Operations."
+    when: "always"
+    queue: Operations
+    reason_template: "Routed to Operations: no more specific rule matched, so this is handled as general intake (rule R-999)."
+    confidence: 0.50          # below P1's 0.80 - a default match can never justify provisional routing
